@@ -4,6 +4,8 @@
 const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
 
+app.setName('Contractor CRM');
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280,

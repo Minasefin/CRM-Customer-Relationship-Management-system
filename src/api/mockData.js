@@ -62,5 +62,39 @@ export const contracts = [
 export const employment = contacts
   .filter((x) => x.orgId)
   .map((x) => ({ id: `e-${x.id}`, contactId: x.id, orgId: x.orgId, start: x.createdAt, end: null }));
-// Victor Sato moved from Northwind Tactical to Ironclad.
-employment.unshift({ id: 'e-c-109-old', contactId: 'c-109', orgId: 'org-2', start: daysAgo(800), end: daysAgo(90) });
+
+// Past moves between firms, so work history and the Statistics page have something to show.
+const pastJob = (contactId, orgId, startDays, endDays) => {
+  employment.unshift({ id: `e-${contactId}-${orgId}-${endDays}`, contactId, orgId, start: daysAgo(startDays), end: daysAgo(endDays) });
+};
+pastJob('c-109', 'org-2', 800, 90); // Victor: Northwind -> Ironclad
+pastJob('c-111', 'org-2', 1100, 700); // Rafael: Northwind -> Ironclad
+pastJob('c-110', 'org-1', 400, 45); // Grace: Ironclad -> Northwind
+pastJob('c-102', 'org-4', 600, 210); // Dana: Granite Point -> Ironclad
+pastJob('c-105', 'org-1', 900, 500); // Owen: Ironclad -> Granite Point
+
+// Older check-ins, generated the same way every time, so the Statistics page has a
+// year of history. All are older than each person's newest note, so "last contacted" is unchanged.
+let seed = 42;
+const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+const topics = [
+  'Checked in by phone.',
+  'Quick text about availability.',
+  'Talked about upcoming rotation.',
+  'Asked about a referral for a medic.',
+  'Caught up after their last contract.',
+  'Confirmed new phone number.',
+];
+contacts.forEach((x) => {
+  if (x.notes.length === 0) return;
+  const newest = Math.min(...x.notes.map((n) => (Date.now() - new Date(n.at)) / DAY));
+  const oldest = Math.min(400, (Date.now() - new Date(x.createdAt)) / DAY);
+  let d = newest + 6 + rand() * 20;
+  let i = 0;
+  while (d < oldest) {
+    if (!x.notes.some((n) => Math.abs((Date.now() - new Date(n.at)) / DAY - d) < 3)) {
+      x.notes.push({ id: `${x.id}-h${i++}`, at: daysAgo(d), text: topics[Math.floor(rand() * topics.length)] });
+    }
+    d += 8 + rand() * 30;
+  }
+});

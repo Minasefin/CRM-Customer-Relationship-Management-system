@@ -5,6 +5,7 @@ const main = [
   { id: 'recent', label: 'Recently added', icon: 'recent' },
   { id: 'orgs', label: 'Organizations', icon: 'orgs' },
   { id: 'contracts', label: 'Contracts', icon: 'contracts' },
+  { id: 'stats', label: 'Statistics', icon: 'stats' },
   { id: 'archived', label: 'Archived', icon: 'archived' },
 ];
 

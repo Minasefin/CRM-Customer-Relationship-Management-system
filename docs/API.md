@@ -34,6 +34,7 @@ All functions are async and return plain objects. Dates are ISO strings (`2026-1
 | `setContactStatus(id, status)` | `Contact` | `'active' \| 'inactive' \| 'deceased'`. No delete function on purpose. |
 | `moveContact(id, newOrgId)` | `Contact` | Ends the current employment row and starts a new one. `newOrgId` can be `null` (going independent). |
 | `getEmploymentHistory(contactId)` | `Employment[]` | |
+| `getAllEmployment()` | `Employment[]` | Everyone's work history, for the Statistics page and firm pages |
 | `addNote(contactId, text)` | `Note` | Timestamp set by the database |
 
 ## Contracts (Adrian)

@@ -65,6 +65,9 @@ export const api = real || {
   async getEmploymentHistory(contactId) {
     return copy(mock.employment.filter((e) => e.contactId === contactId));
   },
+  async getAllEmployment() {
+    return copy(mock.employment);
+  },
   async setContactStatus(id, status) {
     const contact = find(mock.contacts, id);
     contact.status = status;
@@ -80,5 +83,15 @@ export const api = real || {
   // Contracts
   async getContracts() {
     return copy(mock.contracts);
+  },
+  async createContract(data) {
+    const contract = { id: newId('k'), status: 'active', end: null, ...data };
+    mock.contracts.push(contract);
+    return copy(contract);
+  },
+  async updateContract(id, data) {
+    const contract = find(mock.contracts, id);
+    Object.assign(contract, data, { id });
+    return copy(contract);
   },
 };

@@ -32,3 +32,4 @@ The UI uses made-up test data from `src/api/mockData.js` until the database laye
 - Work on your own branch and open a pull request. Someone else reviews it before it merges.
 - Merge small pieces often.
 - Only synthetic data goes in this repo. Database files are ignored by git on purpose.
+- Run `npm run check:secrets` before committing. Pull requests run it automatically, plus a vulnerability check and a build. See [`SECURITY.md`](SECURITY.md).

@@ -25,7 +25,7 @@ Update this section whenever something lands, so everyone (and their AI tools) k
 
 | Area | Status | Next step |
 | --- | --- | --- |
-| UI (Mina) | App shell, sidebar, contact grid, settings, auto light/dark, contact profile (notes, call/text, status, work history), add/edit forms for contacts and orgs done with mock data | Login and first-time setup screens, then swap mock data for real functions |
+| UI (Mina) | App shell, sidebar, contact grid, settings, auto light/dark, contact profile (notes, call/text, status, work history), add/edit forms for contacts, orgs and contracts, firm pages, On contract/Available labels, Statistics page done with mock data | Login and first-time setup screens, then swap mock data for real functions |
 | Database (Adrian) | Draft schema in `database/schema.sql`; nothing built yet | Review `docs/API.md`, set up encrypted SQLite, implement Organizations/Contacts/Contracts functions |
 | Auth (Nic) | Notes in `auth/README.md`; nothing built yet | Review `docs/API.md`, agree on key hand-off with Adrian, implement Auth functions |
 | Shared | `docs/API.md` is a draft | All three agree on it, then build against it |

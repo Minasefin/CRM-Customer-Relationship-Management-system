@@ -1,4 +1,6 @@
 import ContactCard from '../components/ContactCard.jsx';
+import Icon from '../components/Icon.jsx';
+import { orgInitials } from '../components/formBits.jsx';
 import { formatDate } from '../lib/freshness.js';
 
 const money = (n) => n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -25,24 +27,41 @@ export function RecentPage({ contacts, orgsById, onOpen }) {
   );
 }
 
-export function OrganizationsPage({ organizations, contacts }) {
+export function OrganizationsPage({ organizations, contacts, onAddOrg, onEditOrg }) {
+  const independent = contacts.filter((c) => !c.orgId && c.status === 'active').length;
   return (
     <>
       <header className="page-head">
         <div>
           <h1>Organizations</h1>
-          <p className="page-sub">{organizations.length} firms in your contacts.</p>
+          <p className="page-sub">
+            {organizations.length} firms in your contacts{independent > 0 && `, plus ${independent} independent ${independent === 1 ? 'contact' : 'contacts'}`}.
+          </p>
         </div>
+        <button className="btn-primary" onClick={onAddOrg}>
+          <Icon name="plus" size={16} /> Add organization
+        </button>
       </header>
       <div className="grid grid-wide">
         {organizations.map((o) => {
           const people = contacts.filter((c) => c.orgId === o.id && c.status === 'active');
+          const place = [o.city, o.country].filter(Boolean).join(', ');
           return (
-            <article key={o.id} className="org-card" tabIndex={0}>
-              <div className="org-logo" aria-hidden="true">{o.name.split(' ').map((w) => w[0]).slice(0, 2).join('')}</div>
+            <article
+              key={o.id}
+              className="org-card"
+              tabIndex={0}
+              role="button"
+              aria-label={`Edit ${o.name}`}
+              onClick={() => onEditOrg(o.id)}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onEditOrg(o.id))}
+            >
+              <div className="org-logo" aria-hidden="true">
+                {o.logo ? <img src={o.logo} alt="" /> : orgInitials(o.name)}
+              </div>
               <div>
                 <h3>{o.name}</h3>
-                <p className="muted">{o.city}, {o.country}</p>
+                <p className="muted">{place || 'No location yet'}</p>
                 <p className="org-people">{people.length} active {people.length === 1 ? 'contact' : 'contacts'}</p>
               </div>
             </article>

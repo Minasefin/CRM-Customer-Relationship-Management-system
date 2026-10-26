@@ -41,12 +41,29 @@ function themeForHour(hour, lightFrom, darkFrom) {
   return hour >= lightFrom && hour < darkFrom ? 'light' : 'dark';
 }
 
+// When the next scheduled switch happens (the next lightFrom or darkFrom hour).
+export function nextSwitch(lightFrom, darkFrom, from = new Date()) {
+  const candidates = [lightFrom, darkFrom].flatMap((h) => {
+    const today = new Date(from);
+    today.setHours(h, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    return [today, tomorrow];
+  });
+  return candidates.filter((d) => d > from).sort((a, b) => a - b)[0].toISOString();
+}
+
+// Picks the theme: a sidebar override wins until the next scheduled switch,
+// then the time-of-day schedule takes over again.
+function pickTheme(s) {
+  if (!s.autoTheme) return s.manualTheme;
+  if (s.override && new Date(s.override.until) > new Date()) return s.override.theme;
+  return themeForHour(new Date().getHours(), s.lightFrom, s.darkFrom);
+}
+
 // Applies the theme to <html data-theme>. Re-checks every minute in auto mode.
 export function useTheme(settings) {
-  const pick = () =>
-    settings.autoTheme
-      ? themeForHour(new Date().getHours(), settings.lightFrom, settings.darkFrom)
-      : settings.manualTheme;
+  const pick = () => pickTheme(settings);
   const [theme, setTheme] = useState(pick);
 
   useEffect(() => {
@@ -54,7 +71,7 @@ export function useTheme(settings) {
     if (!settings.autoTheme) return;
     const t = setInterval(() => setTheme(pick()), 60 * 1000);
     return () => clearInterval(t);
-  }, [settings.autoTheme, settings.lightFrom, settings.darkFrom, settings.manualTheme]);
+  }, [settings.autoTheme, settings.lightFrom, settings.darkFrom, settings.manualTheme, settings.override?.until, settings.override?.theme]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;

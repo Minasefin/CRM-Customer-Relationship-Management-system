@@ -3,9 +3,11 @@ import Sidebar from './components/Sidebar.jsx';
 import ContactsPage from './pages/ContactsPage.jsx';
 import ContactProfile from './pages/ContactProfile.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
+import ContactForm from './components/ContactForm.jsx';
+import OrgForm from './components/OrgForm.jsx';
 import { RecentPage, OrganizationsPage, ContractsPage, ArchivedPage } from './pages/OtherPages.jsx';
 import { api } from './api/index.js';
-import { SettingsContext, useSettingsState, useTheme } from './hooks/useSettings.js';
+import { SettingsContext, useSettingsState, useTheme, nextSwitch } from './hooks/useSettings.js';
 
 const byId = (list) => Object.fromEntries(list.map((x) => [x.id, x]));
 
@@ -43,6 +45,15 @@ export default function App() {
     archived: data.contacts.filter((c) => c.status !== 'active').length,
   };
 
+  // Sidebar light/dark click. With the time-of-day switch on, it holds until the next
+  // scheduled switch and then the schedule takes over. With it off, it just flips the mode.
+  const toggleTheme = () => {
+    const [s, update] = settingsState;
+    const other = theme === 'dark' ? 'light' : 'dark';
+    if (s.autoTheme) update({ override: { theme: other, until: nextSwitch(s.lightFrom, s.darkFrom) } });
+    else update({ manualTheme: other });
+  };
+
   const navigate = (p) => {
     setOpenId(null);
     setPage(p);
@@ -58,20 +69,56 @@ export default function App() {
     await load();
   };
 
-  const props = { ...data, orgsById, contactsById, onOpen: setOpenId };
+  // Which form panel is open: { kind: 'contact' | 'org', id: string | null } (null id = adding new)
+  const [form, setForm] = useState(null);
+
+  const saveContact = async (values, { moved }) => {
+    if (form.id) {
+      await api.updateContact(form.id, values);
+      if (moved) await api.moveContact(form.id, values.orgId);
+    } else {
+      const created = await api.createContact(values);
+      setOpenId(created.id);
+    }
+    await load();
+  };
+
+  const createOrg = async (values) => {
+    const org = await api.createOrganization(values);
+    await load();
+    return org;
+  };
+
+  const saveOrg = async (values) => {
+    if (form.id) await api.updateOrganization(form.id, values);
+    else await api.createOrganization(values);
+    await load();
+  };
+
+  const props = {
+    ...data,
+    orgsById,
+    contactsById,
+    onOpen: setOpenId,
+    onAdd: () => setForm({ kind: 'contact', id: null }),
+    onAddOrg: () => setForm({ kind: 'org', id: null }),
+    onEditOrg: (id) => setForm({ kind: 'org', id }),
+  };
   const open = openId && contactsById[openId];
 
   return (
     <SettingsContext.Provider value={settingsState}>
       <div className="app">
-        <Sidebar page={page} onNavigate={navigate} counts={counts} theme={theme} />
+        <Sidebar page={page} onNavigate={navigate} counts={counts} theme={theme} onToggleTheme={toggleTheme} />
         <main className="main">
           {open ? (
             <ContactProfile
               contact={open}
               org={orgsById[open.orgId]}
+              orgsById={orgsById}
               contracts={data.contracts}
               onBack={() => setOpenId(null)}
+              onEdit={() => setForm({ kind: 'contact', id: open.id })}
               onAddNote={addNote}
               onSetStatus={setStatus}
             />
@@ -87,6 +134,31 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {form?.kind === 'contact' && (
+        <ContactForm
+          key={form.id || 'new'}
+          contact={form.id ? contactsById[form.id] : null}
+          organizations={data.organizations}
+          contacts={data.contacts}
+          onSave={saveContact}
+          onCreateOrg={createOrg}
+          onOpenExisting={(id) => {
+            setForm(null);
+            setOpenId(id);
+          }}
+          onClose={() => setForm(null)}
+        />
+      )}
+      {form?.kind === 'org' && (
+        <OrgForm
+          key={form.id || 'new-org'}
+          org={form.id ? orgsById[form.id] : null}
+          organizations={data.organizations}
+          onSave={saveOrg}
+          onClose={() => setForm(null)}
+        />
+      )}
     </SettingsContext.Provider>
   );
 }

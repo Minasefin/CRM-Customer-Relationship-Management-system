@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Avatar } from '../components/ContactCard.jsx';
 import Icon from '../components/Icon.jsx';
 import { freshness, formatDate, relativeDays } from '../lib/freshness.js';
 import { useSettings } from '../hooks/useSettings.js';
+import { api } from '../api/index.js';
 
 const money = (n) => n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
@@ -10,19 +11,29 @@ const formatDateTime = (iso) =>
   new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 const statusLabel = { active: 'Active', inactive: 'Left / inactive', deceased: 'Deceased' };
+const socialLabel = { x: 'X', instagram: 'Instagram', snapchat: 'Snapchat', facebook: 'Facebook' };
 
-export default function ContactProfile({ contact, org, contracts, onBack, onAddNote, onSetStatus }) {
+export default function ContactProfile({ contact, org, orgsById, contracts, onBack, onEdit, onAddNote, onSetStatus }) {
   const [settings] = useSettings();
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirm, setConfirm] = useState(null); // status waiting for confirmation
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    if (contact) api.getEmploymentHistory(contact.id).then(setHistory);
+  }, [contact?.id, contact?.orgId]);
 
   if (!contact) return null;
   const f = freshness(contact, settings);
   const notes = [...contact.notes].sort((a, b) => (a.at < b.at ? 1 : -1));
   const theirContracts = contracts.filter((k) => k.contactId === contact.id);
   const archived = contact.status !== 'active';
-  const digits = (contact.phone || '').replace(/[^\d+]/g, '');
+  const phones = contact.phones || [];
+  const emails = contact.emails || [];
+  const mainPhone = (phones[0]?.number || '').replace(/[^\d+]/g, '');
+  const socialRows = Object.entries(contact.social || {}).filter(([, v]) => v);
+  const jobs = [...history].sort((a, b) => (a.start < b.start ? 1 : -1));
 
   const saveNote = async (e) => {
     e.preventDefault();
@@ -48,7 +59,11 @@ export default function ContactProfile({ contact, org, contracts, onBack, onAddN
         <Avatar contact={contact} f={f} size="lg" />
         <div className="profile-id">
           <h1>{contact.firstName} {contact.lastName}</h1>
-          <p className="profile-role">{contact.title}{org && <> at <strong>{org.name}</strong></>}</p>
+          <p className="profile-role">
+            {contact.title}
+            {contact.title && ' at '}
+            <strong>{org ? org.name : 'Independent'}</strong>
+          </p>
           {archived ? (
             <p className={`status-pill status-${contact.status}`}>{statusLabel[contact.status]}</p>
           ) : f.level === 'never' ? (
@@ -60,12 +75,15 @@ export default function ContactProfile({ contact, org, contracts, onBack, onAddN
             </p>
           )}
         </div>
-        {digits && (
-          <div className="quick-actions">
-            <a className="btn-soft" href={`tel:${digits}`}><Icon name="phone" size={16} /> Call</a>
-            <a className="btn-soft" href={`sms:${digits}`}><Icon name="message" size={16} /> Text</a>
-          </div>
-        )}
+        <div className="quick-actions">
+          {mainPhone && (
+            <>
+              <a className="btn-soft" href={`tel:${mainPhone}`}><Icon name="phone" size={16} /> Call</a>
+              <a className="btn-soft" href={`sms:${mainPhone}`}><Icon name="message" size={16} /> Text</a>
+            </>
+          )}
+          <button className="btn-ghost" onClick={onEdit}><Icon name="edit" size={15} /> Edit</button>
+        </div>
       </header>
 
       <div className="profile-body">
@@ -105,16 +123,56 @@ export default function ContactProfile({ contact, org, contracts, onBack, onAddN
           <section className="panel">
             <h2>Contact info</h2>
             <dl className="facts">
-              <dt>Phone</dt>
-              <dd>{contact.phone || '—'}</dd>
-              <dt>Email</dt>
-              <dd>{contact.email ? <a href={`mailto:${contact.email}`}>{contact.email}</a> : '—'}</dd>
-              <dt>Organization</dt>
-              <dd>{org ? `${org.name}, ${org.city}` : '—'}</dd>
-              <dt>Added</dt>
-              <dd>{formatDate(contact.createdAt)}</dd>
+              {phones.length === 0 && emails.length === 0 && !contact.address && (
+                <>
+                  <dt>Details</dt>
+                  <dd className="muted">None yet. Use Edit to add them.</dd>
+                </>
+              )}
+              {phones.map((p, i) => (
+                <div className="fact" key={`p${i}`}>
+                  <dt>{p.label}</dt>
+                  <dd><a href={`tel:${p.number.replace(/[^\d+]/g, '')}`}>{p.number}</a></dd>
+                </div>
+              ))}
+              {emails.map((m, i) => (
+                <div className="fact" key={`m${i}`}>
+                  <dt>{m.label} email</dt>
+                  <dd><a href={`mailto:${m.address}`}>{m.address}</a></dd>
+                </div>
+              ))}
+              {contact.address && (
+                <div className="fact">
+                  <dt>Address</dt>
+                  <dd>{contact.address}</dd>
+                </div>
+              )}
+              <div className="fact">
+                <dt>Added</dt>
+                <dd>{formatDate(contact.createdAt)}</dd>
+              </div>
             </dl>
           </section>
+
+          {(contact.spouse || contact.children?.length > 0) && (
+            <section className="panel">
+              <h2>Family</h2>
+              <dl className="facts">
+                {contact.spouse && (
+                  <div className="fact">
+                    <dt>Spouse</dt>
+                    <dd>{contact.spouse}</dd>
+                  </div>
+                )}
+                {contact.children?.length > 0 && (
+                  <div className="fact">
+                    <dt>Children</dt>
+                    <dd>{contact.children.join(', ')}</dd>
+                  </div>
+                )}
+              </dl>
+            </section>
+          )}
 
           {contact.skills.length > 0 && (
             <section className="panel">
@@ -124,6 +182,24 @@ export default function ContactProfile({ contact, org, contracts, onBack, onAddN
               </ul>
             </section>
           )}
+
+          <section className="panel">
+            <h2>Work history</h2>
+            {jobs.length === 0 ? (
+              <p className="muted small">Independent. No organizations yet.</p>
+            ) : (
+              <ol className="jobs">
+                {jobs.map((j) => (
+                  <li key={j.id} className={j.end ? '' : 'is-current'}>
+                    <div className="contract-title">{orgsById[j.orgId]?.name || 'Unknown organization'}</div>
+                    <div className="muted small">
+                      {formatDate(j.start)} to {j.end ? formatDate(j.end) : 'now'}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
 
           <section className="panel">
             <h2>Contracts</h2>
@@ -142,6 +218,20 @@ export default function ContactProfile({ contact, org, contracts, onBack, onAddN
             )}
           </section>
 
+          {socialRows.length > 0 && (
+            <section className="panel">
+              <h2>Social media</h2>
+              <dl className="facts">
+                {socialRows.map(([k, v]) => (
+                  <div className="fact" key={k}>
+                    <dt>{socialLabel[k] || k}</dt>
+                    <dd>{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
+
           <section className="panel">
             <h2>Status</h2>
             <p className="muted small">Records are never deleted. Archived people move to the Archived page.</p>
@@ -150,13 +240,13 @@ export default function ContactProfile({ contact, org, contracts, onBack, onAddN
                 <p>
                   Mark {contact.firstName} as <strong>{statusLabel[confirm].toLowerCase()}</strong>?
                 </p>
-                <div className="confirm-actions">
-                  <button className="btn-ghost" onClick={() => setConfirm(null)}>Cancel</button>
+                <div className="btn-row">
                   <button className="btn-primary" onClick={() => changeStatus(confirm)}>Yes, mark {statusLabel[confirm].toLowerCase()}</button>
+                  <button className="btn-ghost" onClick={() => setConfirm(null)}>Cancel</button>
                 </div>
               </div>
             ) : (
-              <div className="status-actions">
+              <div className="btn-row status-actions">
                 {['active', 'inactive', 'deceased']
                   .filter((s) => s !== contact.status)
                   .map((s) => (

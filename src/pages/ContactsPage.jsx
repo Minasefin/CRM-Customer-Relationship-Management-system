@@ -11,7 +11,7 @@ const filters = [
   { id: 'overdue', label: 'Overdue' },
 ];
 
-export default function ContactsPage({ contacts, orgsById, onOpen }) {
+export default function ContactsPage({ contacts, orgsById, onOpen, onAdd }) {
   const [settings] = useSettings();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
@@ -37,7 +37,7 @@ export default function ContactsPage({ contacts, orgsById, onOpen }) {
     })
     .filter((c) => {
       if (!q) return true;
-      const hay = [c.firstName, c.lastName, c.title, orgsById[c.orgId]?.name, ...c.skills].join(' ').toLowerCase();
+      const hay = [c.firstName, c.lastName, c.title, c.orgId ? orgsById[c.orgId]?.name : 'Independent', ...c.skills].join(' ').toLowerCase();
       return hay.includes(q);
     });
 
@@ -48,7 +48,7 @@ export default function ContactsPage({ contacts, orgsById, onOpen }) {
           <h1>Contacts</h1>
           <p className="page-sub">{counts.overdue} people are overdue for a check-in.</p>
         </div>
-        <button className="btn-primary">
+        <button className="btn-primary" onClick={onAdd}>
           <Icon name="plus" size={16} /> Add contact
         </button>
       </header>

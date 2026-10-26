@@ -29,10 +29,10 @@ All functions are async and return plain objects. Dates are ISO strings (`2026-1
 | --- | --- | --- |
 | `getContacts()` | `Contact[]` | Includes `notes`, so "last contacted" can be worked out |
 | `getContact(id)` | `Contact` | |
-| `createContact(data)` | `Contact` | |
-| `updateContact(id, data)` | `Contact` | |
+| `createContact(data)` | `Contact` | Also starts their employment history if `orgId` is set |
+| `updateContact(id, data)` | `Contact` | Ignores `orgId`, `status`, `notes`, `createdAt`. Use the functions below for those. |
 | `setContactStatus(id, status)` | `Contact` | `'active' \| 'inactive' \| 'deceased'`. No delete function on purpose. |
-| `moveContact(id, newOrgId)` | `Contact` | Adds a row to employment history |
+| `moveContact(id, newOrgId)` | `Contact` | Ends the current employment row and starts a new one. `newOrgId` can be `null` (going independent). |
 | `getEmploymentHistory(contactId)` | `Employment[]` | |
 | `addNote(contactId, text)` | `Note` | Timestamp set by the database |
 
@@ -51,10 +51,16 @@ These match `src/api/mockData.js`.
 ```js
 Organization = { id, name, country, city, logo }            // logo: image data or null
 Contact = {
-  id, orgId, firstName, lastName, title, status,
-  phone, email, photo, skills: [string],
+  id, firstName, lastName, title, status,
+  orgId,                                    // null = Independent (no organization)
+  photo,                                    // image data URL or null
+  phones: [{ label, number }],              // label: 'Mobile' | 'Work' | 'Home' | 'Other'
+  emails: [{ label, address }],             // label: 'Personal' | 'Work' | 'Other'
+  address, spouse,                          // strings, '' if unknown
+  children: [string],
+  skills: [string],
+  social: { x, instagram, snapchat, facebook },  // strings, '' if none
   createdAt, notes: [Note],
-  // later: addresses, spouse, children, social: { x, instagram, snapchat, facebook }
 }
 Note = { id, at, text }
 Employment = { id, contactId, orgId, start, end }          // end: null while current

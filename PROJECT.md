@@ -25,7 +25,7 @@ Update this section whenever something lands, so everyone (and their AI tools) k
 
 | Area | Status | Next step |
 | --- | --- | --- |
-| UI (Mina) | App shell, sidebar, contact grid, settings, auto light/dark, contact profile (notes, add note, call/text, status changes) done with mock data | Add/edit forms for contacts and orgs, login screens |
+| UI (Mina) | App shell, sidebar, contact grid, settings, auto light/dark, contact profile (notes, call/text, status, work history), add/edit forms for contacts and orgs done with mock data | Login and first-time setup screens, then swap mock data for real functions |
 | Database (Adrian) | Draft schema in `database/schema.sql`; nothing built yet | Review `docs/API.md`, set up encrypted SQLite, implement Organizations/Contacts/Contracts functions |
 | Auth (Nic) | Notes in `auth/README.md`; nothing built yet | Review `docs/API.md`, agree on key hand-off with Adrian, implement Auth functions |
 | Shared | `docs/API.md` is a draft | All three agree on it, then build against it |
@@ -74,6 +74,11 @@ Must = Sprint 1 (Oct 31). Should = the revision week. Could = only if time allow
 - Archived and deceased people are hidden from the main grid and live under Archived
 - Light/dark mode switches by time of day (7 AM–7 PM light by default). Can be turned off in Settings.
 - Light blue accent for toggles and buttons; clean, friendly, professional
+- **Button order everywhere: the blue main action first, then Cancel**
+- Forms open as a panel that slides in from the right
+- A contact with no firm is "Independent" (`orgId: null`), never a fake "N/A" organization
+- Changing a contact's organization asks "Is X moving to Y?" and saves the old one to work history (`moveContact`)
+- Clicking Light/Dark mode in the sidebar switches it until the next scheduled change
 
 ## How the layers connect
 

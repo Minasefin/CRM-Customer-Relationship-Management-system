@@ -6,10 +6,11 @@ const CIRC = 2 * Math.PI * R;
 
 // The ring around the photo drains as time passes since the last contact,
 // and changes color at the stale / overdue thresholds set in Settings.
-function Avatar({ contact, f }) {
+export function Avatar({ contact, f, size }) {
   const initials = (contact.firstName[0] + contact.lastName[0]).toUpperCase();
+  const archived = contact.status !== 'active';
   return (
-    <div className={`avatar level-${f.level}`}>
+    <div className={`avatar level-${archived ? 'never' : f.level}` + (size === 'lg' ? ' avatar-lg' : '') + (archived ? ' is-archived' : '')}>
       <svg viewBox="0 0 68 68" className="avatar-ring" aria-hidden="true">
         <circle cx="34" cy="34" r={R} className="ring-track" />
         <circle
@@ -27,13 +28,26 @@ function Avatar({ contact, f }) {
   );
 }
 
-export default function ContactCard({ contact, org }) {
+export default function ContactCard({ contact, org, onOpen }) {
   const settings = useSettings()[0];
   const f = freshness(contact, settings);
   const archived = contact.status !== 'active';
+  const open = () => onOpen && onOpen(contact.id);
 
   return (
-    <article className={'contact-card' + (archived ? ' is-archived' : '')} tabIndex={0}>
+    <article
+      className={'contact-card' + (archived ? ' is-archived' : '')}
+      tabIndex={0}
+      role="button"
+      aria-label={`Open ${contact.firstName} ${contact.lastName}`}
+      onClick={open}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          open();
+        }
+      }}
+    >
       <Avatar contact={contact} f={f} />
       <h3 className="contact-name">
         {contact.firstName} {contact.lastName}

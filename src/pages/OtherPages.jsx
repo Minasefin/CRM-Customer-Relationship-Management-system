@@ -3,7 +3,7 @@ import { formatDate } from '../lib/freshness.js';
 
 const money = (n) => n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
-export function RecentPage({ contacts, orgsById }) {
+export function RecentPage({ contacts, orgsById, onOpen }) {
   const recent = [...contacts]
     .filter((c) => c.status === 'active')
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
@@ -18,7 +18,7 @@ export function RecentPage({ contacts, orgsById }) {
       </header>
       <div className="grid">
         {recent.map((c) => (
-          <ContactCard key={c.id} contact={c} org={orgsById[c.orgId]} />
+          <ContactCard key={c.id} contact={c} org={orgsById[c.orgId]} onOpen={onOpen} />
         ))}
       </div>
     </>
@@ -95,7 +95,7 @@ export function ContractsPage({ contracts, contactsById, orgsById }) {
   );
 }
 
-export function ArchivedPage({ contacts, orgsById }) {
+export function ArchivedPage({ contacts, orgsById, onOpen }) {
   const archived = contacts.filter((c) => c.status !== 'active');
   return (
     <>
@@ -107,7 +107,7 @@ export function ArchivedPage({ contacts, orgsById }) {
       </header>
       <div className="grid">
         {archived.map((c) => (
-          <ContactCard key={c.id} contact={c} org={orgsById[c.orgId]} />
+          <ContactCard key={c.id} contact={c} org={orgsById[c.orgId]} onOpen={onOpen} />
         ))}
       </div>
     </>

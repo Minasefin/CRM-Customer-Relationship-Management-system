@@ -11,7 +11,7 @@ const filters = [
   { id: 'overdue', label: 'Overdue' },
 ];
 
-export default function ContactsPage({ contacts, orgsById }) {
+export default function ContactsPage({ contacts, orgsById, onOpen }) {
   const [settings] = useSettings();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
@@ -85,7 +85,7 @@ export default function ContactsPage({ contacts, orgsById }) {
       ) : (
         <div className="grid">
           {shown.map((c) => (
-            <ContactCard key={c.id} contact={c} org={orgsById[c.orgId]} />
+            <ContactCard key={c.id} contact={c} org={orgsById[c.orgId]} onOpen={onOpen} />
           ))}
         </div>
       )}

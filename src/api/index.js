@@ -6,14 +6,29 @@ import * as mock from './mockData.js';
 
 const real = typeof window !== 'undefined' && window.crm && window.crm.api;
 
+// Mock changes live in memory only and reset when the app restarts.
+let nextId = 1;
+const copy = (x) => JSON.parse(JSON.stringify(x));
+
 export const api = real || {
   async getOrganizations() {
-    return mock.organizations;
+    return copy(mock.organizations);
   },
   async getContacts() {
-    return mock.contacts;
+    return copy(mock.contacts);
   },
   async getContracts() {
-    return mock.contracts;
+    return copy(mock.contracts);
+  },
+  async addNote(contactId, text) {
+    const c = mock.contacts.find((x) => x.id === contactId);
+    const note = { id: `mock-note-${nextId++}`, at: new Date().toISOString(), text };
+    c.notes.push(note);
+    return copy(note);
+  },
+  async setContactStatus(id, status) {
+    const c = mock.contacts.find((x) => x.id === id);
+    c.status = status;
+    return copy(c);
   },
 };

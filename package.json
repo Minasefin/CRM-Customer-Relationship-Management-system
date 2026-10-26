@@ -1,5 +1,6 @@
 {
   "name": "contractor-crm",
+  "productName": "Contractor CRM",
   "version": "0.1.0",
   "private": true,
   "description": "Secure offline desktop CRM for managing military contractors and the firms that employ them.",

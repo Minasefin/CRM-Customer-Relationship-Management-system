@@ -13,7 +13,7 @@ const formatDateTime = (iso) =>
 const statusLabel = { active: 'Active', inactive: 'Left / inactive', deceased: 'Deceased' };
 const socialLabel = { x: 'X', instagram: 'Instagram', snapchat: 'Snapchat', facebook: 'Facebook' };
 
-export default function ContactProfile({ contact, org, orgsById, contracts, onBack, onEdit, onAddNote, onSetStatus }) {
+export default function ContactProfile({ contact, org, orgsById, contracts, onBack, onEdit, onAddNote, onSetStatus, onAddContract, onEditContract, onOpenOrg }) {
   const [settings] = useSettings();
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
@@ -62,8 +62,17 @@ export default function ContactProfile({ contact, org, orgsById, contracts, onBa
           <p className="profile-role">
             {contact.title}
             {contact.title && ' at '}
-            <strong>{org ? org.name : 'Independent'}</strong>
+            {org ? (
+              <button className="inline-link" onClick={() => onOpenOrg(org.id)}>{org.name}</button>
+            ) : (
+              <strong>Independent</strong>
+            )}
           </p>
+          {!archived && (
+            <p className={'avail-pill' + (theirContracts.some((k) => k.status === 'active') ? ' is-on' : '')}>
+              {theirContracts.some((k) => k.status === 'active') ? 'On contract' : 'Available'}
+            </p>
+          )}
           {archived ? (
             <p className={`status-pill status-${contact.status}`}>{statusLabel[contact.status]}</p>
           ) : f.level === 'never' ? (
@@ -209,12 +218,19 @@ export default function ContactProfile({ contact, org, orgsById, contracts, onBa
               <ul className="contract-list">
                 {theirContracts.map((k) => (
                   <li key={k.id}>
-                    <div className="contract-title">{k.title}</div>
-                    <div className="muted small">{k.location}, {money(k.value)}</div>
-                    <span className={`status-pill status-${k.status}`}>{k.status === 'active' ? 'On contract' : 'Completed'}</span>
+                    <button className="contract-item" onClick={() => onEditContract(k.id)} aria-label={`Edit ${k.title}`}>
+                      <div className="contract-title">{k.title}</div>
+                      <div className="muted small">{[k.location, money(k.value)].filter(Boolean).join(', ')}</div>
+                      <span className={`status-pill status-${k.status}`}>{k.status === 'active' ? 'On contract' : 'Completed'}</span>
+                    </button>
                   </li>
                 ))}
               </ul>
+            )}
+            {!archived && (
+              <button className="link-btn add-under" onClick={() => onAddContract(contact.id)}>
+                <Icon name="plus" size={14} /> Add contract
+              </button>
             )}
           </section>
 

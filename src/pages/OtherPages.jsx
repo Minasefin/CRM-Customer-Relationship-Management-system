@@ -27,7 +27,7 @@ export function RecentPage({ contacts, orgsById, onOpen }) {
   );
 }
 
-export function OrganizationsPage({ organizations, contacts, onAddOrg, onEditOrg }) {
+export function OrganizationsPage({ organizations, contacts, onAddOrg, onOpenOrg }) {
   const independent = contacts.filter((c) => !c.orgId && c.status === 'active').length;
   return (
     <>
@@ -52,9 +52,9 @@ export function OrganizationsPage({ organizations, contacts, onAddOrg, onEditOrg
               className="org-card"
               tabIndex={0}
               role="button"
-              aria-label={`Edit ${o.name}`}
-              onClick={() => onEditOrg(o.id)}
-              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onEditOrg(o.id))}
+              aria-label={`Open ${o.name}`}
+              onClick={() => onOpenOrg(o.id)}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpenOrg(o.id))}
             >
               <div className="org-logo" aria-hidden="true">
                 {o.logo ? <img src={o.logo} alt="" /> : orgInitials(o.name)}
@@ -72,14 +72,18 @@ export function OrganizationsPage({ organizations, contacts, onAddOrg, onEditOrg
   );
 }
 
-export function ContractsPage({ contracts, contactsById, orgsById }) {
+export function ContractsPage({ contracts, contactsById, orgsById, onAddContract, onEditContract }) {
+  const sorted = [...contracts].sort((a, b) => (a.status !== b.status ? (a.status === 'active' ? -1 : 1) : a.start < b.start ? 1 : -1));
   return (
     <>
       <header className="page-head">
         <div>
           <h1>Contracts</h1>
-          <p className="page-sub">{contracts.filter((k) => k.status === 'active').length} active right now.</p>
+          <p className="page-sub">{contracts.filter((k) => k.status === 'active').length} active right now. Click a contract to edit it.</p>
         </div>
+        <button className="btn-primary" onClick={() => onAddContract()}>
+          <Icon name="plus" size={16} /> Add contract
+        </button>
       </header>
       <div className="table-wrap">
         <table className="table">
@@ -94,11 +98,17 @@ export function ContractsPage({ contracts, contactsById, orgsById }) {
             </tr>
           </thead>
           <tbody>
-            {contracts.map((k) => {
+            {sorted.map((k) => {
               const p = contactsById[k.contactId];
               return (
-                <tr key={k.id}>
-                  <td>{k.title}<div className="muted small">{orgsById[k.orgId]?.name}</div></td>
+                <tr
+                  key={k.id}
+                  className="row-click"
+                  tabIndex={0}
+                  onClick={() => onEditContract(k.id)}
+                  onKeyDown={(e) => e.key === 'Enter' && onEditContract(k.id)}
+                >
+                  <td>{k.title}<div className="muted small">{k.orgId ? orgsById[k.orgId]?.name : 'Independent'}</div></td>
                   <td>{p ? `${p.firstName} ${p.lastName}` : '—'}</td>
                   <td>{k.location}</td>
                   <td className="num">{money(k.value)}</td>

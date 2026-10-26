@@ -1,5 +1,7 @@
 import { freshness, formatDate, relativeDays } from '../lib/freshness.js';
 import { useSettings } from '../hooks/useSettings.js';
+import { availability } from '../lib/availability.js';
+import { useData } from '../lib/dataContext.js';
 
 const R = 30;
 const CIRC = 2 * Math.PI * R;
@@ -32,6 +34,7 @@ export default function ContactCard({ contact, org, onOpen }) {
   const settings = useSettings()[0];
   const f = freshness(contact, settings);
   const archived = contact.status !== 'active';
+  const avail = availability(contact, useData().contracts);
   const open = () => onOpen && onOpen(contact.id);
 
   return (
@@ -66,6 +69,12 @@ export default function ContactCard({ contact, org, onOpen }) {
           <span className="dot" aria-hidden="true" />
           Last contacted {formatDate(f.last)}
           <span className="ago">{relativeDays(f.days)}</span>
+        </p>
+      )}
+
+      {avail && (
+        <p className={'avail-pill' + (avail.onContract ? ' is-on' : '')}>
+          {avail.onContract ? 'On contract' : 'Available'}
         </p>
       )}
 

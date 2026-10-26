@@ -48,9 +48,9 @@ export default function SettingsPage({ theme }) {
         <div className="setting-row">
           <div>
             <label htmlFor="auto-theme" className="setting-label">Switch light and dark mode by time of day</label>
-            <p className="muted small">Right now it's in {theme} mode.</p>
+            <p className="muted small">Right now it's in {theme} mode. Clicking the mode at the bottom of the sidebar switches it until the next scheduled change.</p>
           </div>
-          <Toggle id="auto-theme" checked={s.autoTheme} onChange={(v) => update({ autoTheme: v, manualTheme: theme })} />
+          <Toggle id="auto-theme" checked={s.autoTheme} onChange={(v) => update({ autoTheme: v, manualTheme: theme, override: null })} />
         </div>
 
         <div className={'setting-row' + (s.autoTheme ? '' : ' is-disabled')}>
@@ -59,9 +59,9 @@ export default function SettingsPage({ theme }) {
             <p className="muted small">Dark mode runs the rest of the day.</p>
           </div>
           <div className="hour-range">
-            <HourSelect label="Light mode starts" value={s.lightFrom} disabled={!s.autoTheme} onChange={(v) => update({ lightFrom: v })} />
+            <HourSelect label="Light mode starts" value={s.lightFrom} disabled={!s.autoTheme} onChange={(v) => update({ lightFrom: v, override: null })} />
             <span className="muted">to</span>
-            <HourSelect label="Dark mode starts" value={s.darkFrom} disabled={!s.autoTheme} onChange={(v) => update({ darkFrom: v })} />
+            <HourSelect label="Dark mode starts" value={s.darkFrom} disabled={!s.autoTheme} onChange={(v) => update({ darkFrom: v, override: null })} />
           </div>
         </div>
 

@@ -54,7 +54,7 @@ export default function ContactCard({ contact, org, onOpen }) {
       </h3>
       <p className="contact-role">
         {contact.title}
-        {org && <span className="contact-org">{org.name}</span>}
+        <span className="contact-org">{org ? org.name : 'Independent'}</span>
       </p>
 
       {archived ? (

@@ -8,7 +8,7 @@ const main = [
   { id: 'archived', label: 'Archived', icon: 'archived' },
 ];
 
-export default function Sidebar({ page, onNavigate, counts, theme }) {
+export default function Sidebar({ page, onNavigate, counts, theme, onToggleTheme }) {
   const item = (it) => (
     <button
       key={it.id}
@@ -34,10 +34,14 @@ export default function Sidebar({ page, onNavigate, counts, theme }) {
       <nav className="nav">{main.map(item)}</nav>
       <div className="sidebar-foot">
         {item({ id: 'settings', label: 'Settings', icon: 'settings' })}
-        <div className="theme-hint">
+        <button
+          className="theme-hint"
+          onClick={onToggleTheme}
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
           <Icon name={theme === 'dark' ? 'moon' : 'sun'} size={15} />
           {theme === 'dark' ? 'Dark mode' : 'Light mode'}
-        </div>
+        </button>
       </div>
     </aside>
   );

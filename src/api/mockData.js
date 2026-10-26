@@ -19,15 +19,24 @@ const c = (id, firstName, lastName, orgId, title, skills, status, createdDaysAgo
   title,
   skills,
   status, // 'active' | 'inactive' | 'deceased'
-  phone: extra.phone ?? '+1 615 555 0' + id.slice(-3).padStart(3, '1'),
-  email: `${firstName}.${lastName}`.toLowerCase() + '@example.com',
+  phones: [{ label: 'Mobile', number: '+1 615 555 0' + id.slice(-3) }],
+  emails: [{ label: 'Personal', address: `${firstName}.${lastName}`.toLowerCase() + '@example.com' }],
+  address: extra.address ?? '',
+  spouse: extra.spouse ?? '',
+  children: extra.children ?? [],
+  social: extra.social ?? { x: '', instagram: '', snapchat: '', facebook: '' },
   photo: null,
   createdAt: daysAgo(createdDaysAgo),
   notes: noteDays.map((d, i) => ({ id: `${id}-n${i}`, at: daysAgo(d), text: 'Checked in by phone.' })),
 });
 
 export const contacts = [
-  c('c-101', 'Marcus', 'Hale', 'org-1', 'Team lead', ['Demolitions', 'Close protection'], 'active', 400, [3, 40, 120]),
+  c('c-101', 'Marcus', 'Hale', 'org-1', 'Team lead', ['Demolitions', 'Close protection'], 'active', 400, [3, 40, 120], {
+    address: '1200 Wilson Blvd, Arlington, VA 22209',
+    spouse: 'Renee Hale',
+    children: ['Caleb', 'Ivy'],
+    social: { x: '@mhale', instagram: '', snapchat: '', facebook: 'marcus.hale' },
+  }),
   c('c-102', 'Dana', 'Whitfield', 'org-1', 'Medic', ['Combat medicine', 'Arabic'], 'active', 210, [18, 75]),
   c('c-103', 'Ellis', 'Navarro', 'org-2', 'Pilot', ['Rotary wing', 'Night operations'], 'active', 300, [52, 160]),
   c('c-104', 'Priya', 'Raman', 'org-3', 'Logistics manager', ['Supply chain', 'Swahili'], 'active', 6, [6]),
@@ -39,6 +48,7 @@ export const contacts = [
   c('c-110', 'Grace', 'Holloway', 'org-2', 'Comms specialist', ['Satellite comms', 'Encryption'], 'active', 45, [44]),
   c('c-111', 'Rafael', 'Duarte', 'org-1', 'Close protection', ['Close protection', 'Portuguese'], 'inactive', 700, [200]),
   c('c-112', 'Hank', 'Mercer', 'org-4', 'Advisor', ['Training', 'Logistics'], 'deceased', 900, [365]),
+  c('c-113', 'Sofia', 'Lind', null, 'Freelance interpreter', ['Russian', 'Arabic'], 'active', 30, [8]),
 ];
 
 export const contracts = [
@@ -47,3 +57,10 @@ export const contracts = [
   { id: 'k-3', contactId: 'c-103', orgId: 'org-2', title: 'Aviation support', location: 'Djibouti', value: 240000, status: 'completed', start: daysAgo(400), end: daysAgo(150) },
   { id: 'k-4', contactId: 'c-105', orgId: 'org-4', title: 'Facility risk review', location: 'Abu Dhabi, UAE', value: 48000, status: 'completed', start: daysAgo(300), end: daysAgo(240) },
 ];
+
+// One row per stint at an organization. end: null = current.
+export const employment = contacts
+  .filter((x) => x.orgId)
+  .map((x) => ({ id: `e-${x.id}`, contactId: x.id, orgId: x.orgId, start: x.createdAt, end: null }));
+// Victor Sato moved from Northwind Tactical to Ironclad.
+employment.unshift({ id: 'e-c-109-old', contactId: 'c-109', orgId: 'org-2', start: daysAgo(800), end: daysAgo(90) });

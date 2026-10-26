@@ -42,7 +42,7 @@ All functions are async and return plain objects. Dates are ISO strings (`2026-1
 | Function | Returns |
 | --- | --- |
 | `getContracts()` | `Contract[]` |
-| `createContract(data)` | `Contract` |  <!-- data: { contactId, orgId, title, location, value, status, start, end } -->
+| `createContract(data)` | `Contract` |
 | `updateContract(id, data)` | `Contract` |
 
 ## Shapes

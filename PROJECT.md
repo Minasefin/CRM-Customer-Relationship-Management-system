@@ -19,6 +19,17 @@ Benjamin Burchfield runs a private organization that handles military contracts.
 - **October 31, 2026:** Sprint 1 due (baseline app + statement of work)
 - **The week after:** revision based on client feedback
 
+## Where we stand
+
+Update this section whenever something lands, so everyone (and their AI tools) knows what's done.
+
+| Area | Status | Next step |
+| --- | --- | --- |
+| UI (Mina) | App shell, sidebar, contact grid, settings, auto light/dark done with mock data | Contact profile page, add/edit forms, login screens |
+| Database (Adrian) | Draft schema in `database/schema.sql`; nothing built yet | Review `docs/API.md`, set up encrypted SQLite, implement Organizations/Contacts/Contracts functions |
+| Auth (Nic) | Notes in `auth/README.md`; nothing built yet | Review `docs/API.md`, agree on key hand-off with Adrian, implement Auth functions |
+| Shared | `docs/API.md` is a draft | All three agree on it, then build against it |
+
 ## What the app stores
 
 - **Organizations** (firms) located anywhere in the world, with logos

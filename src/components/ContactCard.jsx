@@ -1,7 +1,10 @@
 import { freshness, formatDate, relativeDays } from '../lib/freshness.js';
 import { useSettings } from '../hooks/useSettings.js';
 import { availability } from '../lib/availability.js';
-import { useData } from '../lib/dataContext.js';
+import { useData, useActions } from '../lib/dataContext.js';
+import MoreMenu from './MoreMenu.jsx';
+
+const statusLabels = { active: 'Mark active', inactive: 'Mark left / inactive', deceased: 'Mark deceased' };
 
 const R = 30;
 const CIRC = 2 * Math.PI * R;
@@ -12,7 +15,7 @@ export function Avatar({ contact, f, size }) {
   const initials = (contact.firstName[0] + contact.lastName[0]).toUpperCase();
   const archived = contact.status !== 'active';
   return (
-    <div className={`avatar level-${archived ? 'never' : f.level}` + (size === 'lg' ? ' avatar-lg' : '') + (archived ? ' is-archived' : '')}>
+    <div className={`avatar level-${archived ? 'never' : f.level}` + (size ? ` avatar-${size}` : '') + (archived ? ' is-archived' : '')}>
       <svg viewBox="0 0 68 68" className="avatar-ring" aria-hidden="true">
         <circle cx="34" cy="34" r={R} className="ring-track" />
         <circle
@@ -36,6 +39,13 @@ export default function ContactCard({ contact, org, onOpen }) {
   const archived = contact.status !== 'active';
   const avail = availability(contact, useData().contracts);
   const open = () => onOpen && onOpen(contact.id);
+  const actions = useActions();
+  const menu = [
+    { label: 'Edit', onSelect: () => actions.editContact(contact.id) },
+    ...['active', 'inactive', 'deceased']
+      .filter((s) => s !== contact.status)
+      .map((s) => ({ label: statusLabels[s], onSelect: () => actions.setContactStatus(contact, s) })),
+  ];
 
   return (
     <article
@@ -51,6 +61,7 @@ export default function ContactCard({ contact, org, onOpen }) {
         }
       }}
     >
+      {actions.editContact && <MoreMenu items={menu} label={`Actions for ${contact.firstName} ${contact.lastName}`} />}
       <Avatar contact={contact} f={f} />
       <h3 className="contact-name">
         {contact.firstName} {contact.lastName}

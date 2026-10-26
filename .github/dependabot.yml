@@ -1,4 +1,7 @@
-# Opens a pull request when a package (like Electron) has a security fix or update.
+# Opens a pull request when a package has a fix or update.
+# Major versions (like React 18 -> 19 or Vite 7 -> 8) are skipped on purpose: they can
+# break the app and should be done deliberately, not merged from a bot.
+# Security fixes are still opened for every version.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -6,7 +9,16 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+    groups:
+      minor-and-patch:
+        update-types: ['minor', 'patch']
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']

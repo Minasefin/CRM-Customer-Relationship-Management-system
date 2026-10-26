@@ -23,14 +23,35 @@ export const api = real || {
     return copy(mock.organizations);
   },
   async createOrganization(data) {
-    const org = { id: newId('org'), logo: null, ...data };
+    const org = { id: newId('org'), logo: null, archived: false, createdAt: now(), ...data };
     mock.organizations.push(org);
     return copy(org);
   },
   async updateOrganization(id, data) {
     const org = find(mock.organizations, id);
-    Object.assign(org, data, { id });
+    const { archived, createdAt, ...rest } = data;
+    Object.assign(org, rest, { id });
     return copy(org);
+  },
+  // Hides a firm from lists but keeps everything linked to it. archived=false restores it.
+  async archiveOrganization(id, archived = true) {
+    const org = find(mock.organizations, id);
+    org.archived = archived;
+    return copy(org);
+  },
+  // Only for a firm nothing points to (no people ever, no contracts). Otherwise archive it.
+  async deleteOrganization(id) {
+    const used =
+      mock.contacts.some((c) => c.orgId === id) ||
+      mock.employment.some((e) => e.orgId === id) ||
+      mock.contracts.some((k) => k.orgId === id);
+    if (used) {
+      const err = new Error('Organization is in use');
+      err.userMessage = 'This organization has people, history or contracts, so it can only be archived.';
+      throw err;
+    }
+    mock.organizations.splice(mock.organizations.findIndex((o) => o.id === id), 1);
+    return { ok: true };
   },
 
   // Contacts
@@ -93,5 +114,10 @@ export const api = real || {
     const contract = find(mock.contracts, id);
     Object.assign(contract, data, { id });
     return copy(contract);
+  },
+  async deleteContract(id) {
+    find(mock.contracts, id);
+    mock.contracts.splice(mock.contracts.findIndex((k) => k.id === id), 1);
+    return { ok: true };
   },
 };

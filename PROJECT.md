@@ -25,7 +25,7 @@ Update this section whenever something lands, so everyone (and their AI tools) k
 
 | Area | Status | Next step |
 | --- | --- | --- |
-| UI (Mina) | App shell, sidebar, contact grid, settings, auto light/dark, contact profile (notes, call/text, status, work history), add/edit forms for contacts, orgs and contracts, firm pages, On contract/Available labels, Statistics page done with mock data | Login and first-time setup screens, then swap mock data for real functions |
+| UI (Mina) | App shell, sidebar, contact grid, settings, auto light/dark, contact profile (notes, call/text, status, work history), add/edit forms for contacts, orgs and contracts, firm pages, On contract/Available labels, Statistics page, Home page, ⋯ menus with archive/delete, sort dropdowns done with mock data | Login and first-time setup screens, then swap mock data for real functions |
 | Database (Adrian) | Draft schema in `database/schema.sql`; nothing built yet | Review `docs/API.md`, set up encrypted SQLite, implement Organizations/Contacts/Contracts functions |
 | Auth (Nic) | Notes in `auth/README.md`; nothing built yet | Review `docs/API.md`, agree on key hand-off with Adrian, implement Auth functions |
 | Shared | `docs/API.md` is a draft | All three agree on it, then build against it |
@@ -68,8 +68,11 @@ Must = Sprint 1 (Oct 31). Should = the revision week. Could = only if time allow
 
 ## UI decisions (Mina)
 
-- Sidebar: Contacts, Recently added, Organizations, Contracts, Archived, Settings
-- Main page is a grid of contact cards
+- Sidebar: Home, Contacts, Organizations, Contracts, Statistics, Archived, then Settings
+- Home answers "what do I do today?": who to call, active contracts and ones ending soon, latest notes, quick note
+- Contacts is a grid of contact cards with search, filters and a sort dropdown (Recently added is a sort option, not a tab)
+- Every card and row has the same ⋯ menu. Firms: Edit, Archive, Delete (only when nothing points to them). Contacts: Edit, Mark left / deceased / active, never delete. Contracts: Edit, Delete with confirm
+- Organizations, Contacts and Contracts each have a Sort by dropdown
 - Each card shows "Last contacted" with a colored ring around the photo: green under 30 days, yellow 30–90, red over 90. Thresholds are editable in Settings.
 - Archived and deceased people are hidden from the main grid and live under Archived
 - Light/dark mode switches by time of day (7 AM–7 PM light by default). Can be turned off in Settings.

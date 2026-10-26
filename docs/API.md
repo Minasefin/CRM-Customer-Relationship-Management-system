@@ -22,6 +22,8 @@ All functions are async and return plain objects. Dates are ISO strings (`2026-1
 | `getOrganization(id)` | `Organization` |
 | `createOrganization(data)` | `Organization` |
 | `updateOrganization(id, data)` | `Organization` |
+| `archiveOrganization(id, archived)` | `Organization` |
+| `deleteOrganization(id)` | `{ ok }` |
 
 ## Contacts (Adrian)
 
@@ -37,6 +39,8 @@ All functions are async and return plain objects. Dates are ISO strings (`2026-1
 | `getAllEmployment()` | `Employment[]` | Everyone's work history, for the Statistics page and firm pages |
 | `addNote(contactId, text)` | `Note` | Timestamp set by the database |
 
+**Organization rules:** `updateOrganization` ignores `archived` and `createdAt`. `archiveOrganization(id, true)` hides a firm from lists and keeps everything; `false` restores it. `deleteOrganization` must refuse (throw with `userMessage`) if any contact, employment row or contract points to the firm. Only empty firms can be deleted.
+
 ## Contracts (Adrian)
 
 | Function | Returns |
@@ -44,13 +48,14 @@ All functions are async and return plain objects. Dates are ISO strings (`2026-1
 | `getContracts()` | `Contract[]` |
 | `createContract(data)` | `Contract` |
 | `updateContract(id, data)` | `Contract` |
+| `deleteContract(id)` | `{ ok }` |
 
 ## Shapes
 
 These match `src/api/mockData.js`.
 
 ```js
-Organization = { id, name, country, city, logo }            // logo: image data or null
+Organization = { id, name, country, city, logo, archived, createdAt }  // logo: image data or null; archived: boolean
 Contact = {
   id, firstName, lastName, title, status,
   orgId,                                    // null = Independent (no organization)
@@ -65,5 +70,5 @@ Contact = {
 }
 Note = { id, at, text }
 Employment = { id, contactId, orgId, start, end }          // end: null while current
-Contract = { id, contactId, orgId, title, location, value, status, start, end } // status: 'active' | 'completed'
+Contract = { id, contactId, orgId, title, location, value, status, start, end } // status: 'active' | 'completed'; end on an active contract = expected end date (or null)
 ```

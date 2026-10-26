@@ -1,79 +1,86 @@
 import ContactCard from '../components/ContactCard.jsx';
 import Icon from '../components/Icon.jsx';
+import MoreMenu from '../components/MoreMenu.jsx';
+import SortSelect, { useSort } from '../components/SortSelect.jsx';
 import { orgInitials } from '../components/formBits.jsx';
 import { formatDate } from '../lib/freshness.js';
+import { orgSorts, contractSorts, canDeleteOrg } from '../lib/sorting.js';
+import { useActions } from '../lib/dataContext.js';
 
-const money = (n) => n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+const money = (n) => (n || 0).toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
-export function RecentPage({ contacts, orgsById, onOpen }) {
-  const recent = [...contacts]
-    .filter((c) => c.status === 'active')
-    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
-    .slice(0, 8);
+// Same ⋯ menu for a firm wherever it shows up.
+export function orgMenu(org, data, actions) {
+  const items = [{ label: 'Edit', onSelect: () => actions.editOrg(org.id) }];
+  if (org.archived) items.push({ label: 'Restore', onSelect: () => actions.archiveOrg(org, false) });
+  else items.push({ label: 'Archive', onSelect: () => actions.archiveOrg(org, true) });
+  if (canDeleteOrg(org, data)) items.push({ label: 'Delete', danger: true, onSelect: () => actions.deleteOrg(org) });
+  return items;
+}
+
+function OrgCard({ org, data, onOpenOrg }) {
+  const actions = useActions();
+  const people = data.contacts.filter((c) => c.orgId === org.id && c.status === 'active');
+  const place = [org.city, org.country].filter(Boolean).join(', ');
   return (
-    <>
-      <header className="page-head">
-        <div>
-          <h1>Recently added</h1>
-          <p className="page-sub">The newest people in your contacts, newest first.</p>
-        </div>
-      </header>
-      <div className="grid">
-        {recent.map((c) => (
-          <ContactCard key={c.id} contact={c} org={orgsById[c.orgId]} onOpen={onOpen} />
-        ))}
+    <article
+      className={'org-card' + (org.archived ? ' is-archived' : '')}
+      tabIndex={0}
+      role="button"
+      aria-label={`Open ${org.name}`}
+      onClick={() => onOpenOrg(org.id)}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpenOrg(org.id))}
+    >
+      <div className="org-logo" aria-hidden="true">
+        {org.logo ? <img src={org.logo} alt="" /> : orgInitials(org.name)}
       </div>
-    </>
+      <div className="org-card-body">
+        <h3>{org.name}</h3>
+        <p className="muted">{place || 'No location yet'}</p>
+        <p className="org-people">{people.length} active {people.length === 1 ? 'contact' : 'contacts'}</p>
+      </div>
+      <MoreMenu items={orgMenu(org, data, actions)} label={`Actions for ${org.name}`} />
+    </article>
   );
 }
 
-export function OrganizationsPage({ organizations, contacts, onAddOrg, onOpenOrg }) {
+export function OrganizationsPage({ organizations, contacts, contracts, employment, onAddOrg, onOpenOrg }) {
+  const [sort, setSort] = useSort('orgs', orgSorts);
+  const data = { contacts, contracts, employment };
+  const live = organizations.filter((o) => !o.archived);
+  const shown = [...live].sort(orgSorts.find((o) => o.id === sort).fn(data));
   const independent = contacts.filter((c) => !c.orgId && c.status === 'active').length;
+  const archivedCount = organizations.length - live.length;
+
   return (
     <>
       <header className="page-head">
         <div>
           <h1>Organizations</h1>
           <p className="page-sub">
-            {organizations.length} firms in your contacts{independent > 0 && `, plus ${independent} independent ${independent === 1 ? 'contact' : 'contacts'}`}.
+            {live.length} firms in your contacts
+            {independent > 0 && `, plus ${independent} independent ${independent === 1 ? 'contact' : 'contacts'}`}.
+            {archivedCount > 0 && ` ${archivedCount} archived.`}
           </p>
         </div>
         <button className="btn-primary" onClick={onAddOrg}>
           <Icon name="plus" size={16} /> Add organization
         </button>
       </header>
+      <div className="toolbar toolbar-end">
+        <SortSelect value={sort} onChange={setSort} options={orgSorts} />
+      </div>
       <div className="grid grid-wide">
-        {organizations.map((o) => {
-          const people = contacts.filter((c) => c.orgId === o.id && c.status === 'active');
-          const place = [o.city, o.country].filter(Boolean).join(', ');
-          return (
-            <article
-              key={o.id}
-              className="org-card"
-              tabIndex={0}
-              role="button"
-              aria-label={`Open ${o.name}`}
-              onClick={() => onOpenOrg(o.id)}
-              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpenOrg(o.id))}
-            >
-              <div className="org-logo" aria-hidden="true">
-                {o.logo ? <img src={o.logo} alt="" /> : orgInitials(o.name)}
-              </div>
-              <div>
-                <h3>{o.name}</h3>
-                <p className="muted">{place || 'No location yet'}</p>
-                <p className="org-people">{people.length} active {people.length === 1 ? 'contact' : 'contacts'}</p>
-              </div>
-            </article>
-          );
-        })}
+        {shown.map((o) => <OrgCard key={o.id} org={o} data={data} onOpenOrg={onOpenOrg} />)}
       </div>
     </>
   );
 }
 
 export function ContractsPage({ contracts, contactsById, orgsById, onAddContract, onEditContract }) {
-  const sorted = [...contracts].sort((a, b) => (a.status !== b.status ? (a.status === 'active' ? -1 : 1) : a.start < b.start ? 1 : -1));
+  const actions = useActions();
+  const [sort, setSort] = useSort('contracts', contractSorts);
+  const sorted = [...contracts].sort(contractSorts.find((o) => o.id === sort).fn);
   return (
     <>
       <header className="page-head">
@@ -85,60 +92,99 @@ export function ContractsPage({ contracts, contactsById, orgsById, onAddContract
           <Icon name="plus" size={16} /> Add contract
         </button>
       </header>
-      <div className="table-wrap">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Contract</th>
-              <th>Contractor</th>
-              <th>Location</th>
-              <th className="num">Value</th>
-              <th>Started</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((k) => {
-              const p = contactsById[k.contactId];
-              return (
-                <tr
-                  key={k.id}
-                  className="row-click"
-                  tabIndex={0}
-                  onClick={() => onEditContract(k.id)}
-                  onKeyDown={(e) => e.key === 'Enter' && onEditContract(k.id)}
-                >
-                  <td>{k.title}<div className="muted small">{k.orgId ? orgsById[k.orgId]?.name : 'Independent'}</div></td>
-                  <td>{p ? `${p.firstName} ${p.lastName}` : '—'}</td>
-                  <td>{k.location}</td>
-                  <td className="num">{money(k.value)}</td>
-                  <td>{formatDate(k.start)}</td>
-                  <td><span className={`status-pill status-${k.status}`}>{k.status === 'active' ? 'On contract' : 'Completed'}</span></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="toolbar toolbar-end">
+        <SortSelect value={sort} onChange={setSort} options={contractSorts} />
       </div>
+      {sorted.length === 0 ? (
+        <div className="empty">
+          <p>No contracts yet.</p>
+          <button className="btn-primary" onClick={() => onAddContract()}>Add contract</button>
+        </div>
+      ) : (
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Contract</th>
+                <th>Contractor</th>
+                <th>Location</th>
+                <th className="num">Value</th>
+                <th>Started</th>
+                <th>Status</th>
+                <th><span className="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((k) => {
+                const p = contactsById[k.contactId];
+                return (
+                  <tr
+                    key={k.id}
+                    className="row-click"
+                    tabIndex={0}
+                    onClick={() => onEditContract(k.id)}
+                    onKeyDown={(e) => e.key === 'Enter' && onEditContract(k.id)}
+                  >
+                    <td>{k.title}<div className="muted small">{k.orgId ? orgsById[k.orgId]?.name : 'Independent'}</div></td>
+                    <td>{p ? `${p.firstName} ${p.lastName}` : '—'}</td>
+                    <td>{k.location}</td>
+                    <td className="num">{money(k.value)}</td>
+                    <td>{formatDate(k.start)}</td>
+                    <td><span className={`status-pill status-${k.status}`}>{k.status === 'active' ? 'On contract' : 'Completed'}</span></td>
+                    <td className="cell-menu">
+                      <MoreMenu
+                        label={`Actions for ${k.title}`}
+                        items={[
+                          { label: 'Edit', onSelect: () => onEditContract(k.id) },
+                          { label: 'Delete', danger: true, onSelect: () => actions.deleteContract(k) },
+                        ]}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   );
 }
 
-export function ArchivedPage({ contacts, orgsById, onOpen }) {
+export function ArchivedPage({ contacts, organizations, contracts, employment, orgsById, onOpen, onOpenOrg }) {
   const archived = contacts.filter((c) => c.status !== 'active');
+  const archivedOrgs = organizations.filter((o) => o.archived);
+  const data = { contacts, contracts, employment };
   return (
     <>
       <header className="page-head">
         <div>
           <h1>Archived</h1>
-          <p className="page-sub">People who left their organization or have died. Records are kept, never deleted.</p>
+          <p className="page-sub">People who left or have died, and organizations you archived. Their history is kept.</p>
         </div>
       </header>
-      <div className="grid">
-        {archived.map((c) => (
-          <ContactCard key={c.id} contact={c} org={orgsById[c.orgId]} onOpen={onOpen} />
-        ))}
-      </div>
+
+      <section className="org-section first">
+        <h2>People</h2>
+        {archived.length === 0 ? (
+          <p className="muted">No archived people.</p>
+        ) : (
+          <div className="grid">
+            {archived.map((c) => <ContactCard key={c.id} contact={c} org={orgsById[c.orgId]} onOpen={onOpen} />)}
+          </div>
+        )}
+      </section>
+
+      <section className="org-section">
+        <h2>Organizations</h2>
+        {archivedOrgs.length === 0 ? (
+          <p className="muted">No archived organizations. Use Archive in a firm's ⋯ menu to hide it from your lists.</p>
+        ) : (
+          <div className="grid grid-wide">
+            {archivedOrgs.map((o) => <OrgCard key={o.id} org={o} data={data} onOpenOrg={onOpenOrg} />)}
+          </div>
+        )}
+      </section>
     </>
   );
 }

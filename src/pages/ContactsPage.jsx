@@ -3,6 +3,8 @@ import ContactCard from '../components/ContactCard.jsx';
 import Icon from '../components/Icon.jsx';
 import { freshness } from '../lib/freshness.js';
 import { useSettings } from '../hooks/useSettings.js';
+import SortSelect, { useSort } from '../components/SortSelect.jsx';
+import { contactSorts } from '../lib/sorting.js';
 
 const filters = [
   { id: 'all', label: 'Everyone' },
@@ -15,6 +17,7 @@ export default function ContactsPage({ contacts, orgsById, onOpen, onAdd }) {
   const [settings] = useSettings();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
+  const [sort, setSort] = useSort('contacts', contactSorts);
 
   const active = contacts.filter((c) => c.status === 'active');
 
@@ -39,7 +42,8 @@ export default function ContactsPage({ contacts, orgsById, onOpen, onAdd }) {
       if (!q) return true;
       const hay = [c.firstName, c.lastName, c.title, c.orgId ? orgsById[c.orgId]?.name : 'Independent', ...c.skills].join(' ').toLowerCase();
       return hay.includes(q);
-    });
+    })
+    .sort(contactSorts.find((o) => o.id === sort).fn);
 
   return (
     <>
@@ -75,6 +79,7 @@ export default function ContactsPage({ contacts, orgsById, onOpen, onAdd }) {
             </button>
           ))}
         </div>
+        <SortSelect value={sort} onChange={setSort} options={contactSorts} />
       </div>
 
       {shown.length === 0 ? (

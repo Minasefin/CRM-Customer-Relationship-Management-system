@@ -370,7 +370,7 @@ select, .days-input input {
 
 .row-list { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .row-item { display: flex; gap: 8px; width: 100%; }
-.row-item .row-label { flex: 0 0 116px; }
+.row-item .row-label { flex: 0 0 136px; }
 .row-list .link-btn { margin-top: 2px; }
 
 /* Image picker */
@@ -417,3 +417,4 @@ select, .days-input input {
   .drawer, .drawer-scrim { animation: none; }
 }
 .confirm .btn-row { margin-top: 12px; }
+.row-item textarea { flex: 1; }

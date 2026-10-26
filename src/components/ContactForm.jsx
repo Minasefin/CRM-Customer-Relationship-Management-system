@@ -24,11 +24,13 @@ const blank = {
   photo: null,
   phones: [{ label: 'Mobile', number: '' }],
   emails: [{ label: 'Personal', address: '' }],
-  address: '',
-  spouse: '',
+  // Optional single fields are kept as 0- or 1-item lists in the form, so every
+  // optional part works the same way: "+ Add ..." when empty, trash button when filled.
+  address: [],
+  spouse: [],
   children: [],
   skills: [],
-  social: { x: '', instagram: '', snapchat: '', facebook: '' },
+  social: [], // [{ platform, handle }]
 };
 
 function fromContact(c) {
@@ -37,14 +39,20 @@ function fromContact(c) {
     ...blank,
     ...c,
     orgId: c.orgId || '',
-    phones: c.phones?.length ? c.phones : blank.phones,
-    emails: c.emails?.length ? c.emails : blank.emails,
-    social: { ...blank.social, ...(c.social || {}) },
+    phones: c.phones?.length ? c.phones : [],
+    emails: c.emails?.length ? c.emails : [],
+    address: c.address ? [c.address] : [],
+    spouse: c.spouse ? [c.spouse] : [],
+    children: c.children || [],
+    social: Object.entries(c.social || {})
+      .filter(([, handle]) => handle)
+      .map(([platform, handle]) => ({ platform, handle })),
   };
 }
 
-// A repeatable row list: phones, emails, children.
-function RowList({ rows, onChange, render, addLabel, make }) {
+// A repeatable row list: phones, emails, children, spouse, address, social.
+// max={1} turns it into a single optional field.
+function RowList({ rows, onChange, render, addLabel, make, max = Infinity }) {
   return (
     <div className="row-list">
       {rows.map((row, i) => (
@@ -60,9 +68,11 @@ function RowList({ rows, onChange, render, addLabel, make }) {
           </button>
         </div>
       ))}
-      <button type="button" className="link-btn" onClick={() => onChange([...rows, make()])}>
-        <Icon name="plus" size={14} /> {addLabel}
-      </button>
+      {rows.length < max && (
+        <button type="button" className="link-btn" onClick={() => onChange([...rows, make()])}>
+          <Icon name="plus" size={14} /> {addLabel}
+        </button>
+      )}
     </div>
   );
 }
@@ -110,11 +120,17 @@ export default function ContactForm({ contact, organizations, contacts, onSave, 
     photo: form.photo,
     phones: form.phones.filter((p) => p.number.trim()).map((p) => ({ ...p, number: p.number.trim() })),
     emails: form.emails.filter((m) => m.address.trim()).map((m) => ({ ...m, address: m.address.trim() })),
-    address: form.address.trim(),
-    spouse: form.spouse.trim(),
+    address: (form.address[0] || '').trim(),
+    spouse: (form.spouse[0] || '').trim(),
     children: form.children.map((c) => c.trim()).filter(Boolean),
     skills: form.skills,
-    social: Object.fromEntries(Object.entries(form.social).map(([k, v]) => [k, v.trim()])),
+    social: {
+      x: '',
+      instagram: '',
+      snapchat: '',
+      facebook: '',
+      ...Object.fromEntries(form.social.filter((r) => r.handle.trim()).map((r) => [r.platform, r.handle.trim()])),
+    },
   });
 
   const commit = async () => {
@@ -248,18 +264,32 @@ export default function ContactForm({ contact, organizations, contacts, onSave, 
             <small key={k} className="field-error">{errors[k]}</small>
           ))}
         </div>
-        <label className="field">
+        <div className="field">
           <span>Home address</span>
-          <textarea rows={2} value={form.address} onChange={set('address')} />
-        </label>
+          <RowList
+            rows={form.address}
+            onChange={(address) => setForm({ ...form, address })}
+            make={() => ''}
+            max={1}
+            addLabel="Add address"
+            render={(row, update) => <textarea rows={2} value={row} onChange={(e) => update(e.target.value)} placeholder="Street, city, state, ZIP" aria-label="Home address" />}
+          />
+        </div>
       </section>
 
       <section className="form-section">
         <h3>Family</h3>
-        <label className="field">
+        <div className="field">
           <span>Spouse</span>
-          <input value={form.spouse} onChange={set('spouse')} />
-        </label>
+          <RowList
+            rows={form.spouse}
+            onChange={(spouse) => setForm({ ...form, spouse })}
+            make={() => ''}
+            max={1}
+            addLabel="Add spouse"
+            render={(row, update) => <input value={row} onChange={(e) => update(e.target.value)} placeholder="Name" aria-label="Spouse's name" />}
+          />
+        </div>
         <div className="field">
           <span>Children</span>
           <RowList
@@ -282,18 +312,26 @@ export default function ContactForm({ contact, organizations, contacts, onSave, 
 
       <section className="form-section">
         <h3>Social media</h3>
-        <div className="form-grid">
-          {socials.map((s) => (
-            <label className="field" key={s.key}>
-              <span>{s.label}</span>
-              <input
-                value={form.social[s.key]}
-                placeholder={s.placeholder}
-                onChange={(e) => setForm({ ...form, social: { ...form.social, [s.key]: e.target.value } })}
-              />
-            </label>
-          ))}
-        </div>
+        <RowList
+          rows={form.social}
+          onChange={(social) => setForm({ ...form, social })}
+          make={() => ({ platform: socials.find((p) => !form.social.some((r) => r.platform === p.key))?.key, handle: '' })}
+          max={socials.length}
+          addLabel="Add social account"
+          render={(row, update) => {
+            const meta = socials.find((p) => p.key === row.platform);
+            return (
+              <>
+                <select className="row-label" value={row.platform} onChange={(e) => update({ ...row, platform: e.target.value })} aria-label="Platform">
+                  {socials
+                    .filter((p) => p.key === row.platform || !form.social.some((r) => r.platform === p.key))
+                    .map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+                </select>
+                <input value={row.handle} onChange={(e) => update({ ...row, handle: e.target.value })} placeholder={meta?.placeholder} aria-label={`${meta?.label} handle`} />
+              </>
+            );
+          }}
+        />
       </section>
     </Drawer>
   );

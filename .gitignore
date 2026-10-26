@@ -1,0 +1,14 @@
+node_modules/
+dist/
+out/
+.DS_Store
+Thumbs.db
+*.log
+
+# Never commit real data, databases, or secrets.
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+.env
+.env.*

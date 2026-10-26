@@ -2,11 +2,15 @@ import ContactCard from '../components/ContactCard.jsx';
 import Icon from '../components/Icon.jsx';
 import { orgInitials } from '../components/formBits.jsx';
 import { formatDate } from '../lib/freshness.js';
+import MoreMenu from '../components/MoreMenu.jsx';
+import { orgMenu } from './OtherPages.jsx';
+import { useActions } from '../lib/dataContext.js';
 
 const money = (n) => n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
 // Everyone at one firm: current people, people who used to work there, and its contracts.
 export default function OrgPage({ org, contacts, contactsById, contracts, employment, onBack, onEdit, onOpen, onEditContract }) {
+  const actions = useActions();
   if (!org) return null;
   const place = [org.city, org.country].filter(Boolean).join(', ');
   const current = contacts.filter((c) => c.orgId === org.id && c.status === 'active');
@@ -41,8 +45,15 @@ export default function OrgPage({ org, contacts, contactsById, contracts, employ
         </div>
         <div className="quick-actions">
           <button className="btn-ghost" onClick={onEdit}><Icon name="edit" size={15} /> Edit</button>
+          <MoreMenu items={orgMenu(org, { contacts, contracts, employment }, actions)} label={`Actions for ${org.name}`} />
         </div>
       </header>
+      {org.archived && (
+        <p className="warn">
+          {org.name} is archived, so it's hidden from your organization list. Its history is kept.{' '}
+          <button className="link-btn" onClick={() => actions.archiveOrg(org, false)}>Restore it</button>
+        </p>
+      )}
 
       <section className="org-section">
         <h2>People here now</h2>

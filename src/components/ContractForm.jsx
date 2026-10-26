@@ -37,7 +37,7 @@ export default function ContractForm({ contract, contactId, contacts, organizati
     if (!form.title.trim()) e.title = 'Name the contract.';
     const value = form.value.replace(/[$,\s]/g, '');
     if (value && !/^\d+(\.\d+)?$/.test(value)) e.value = 'Use numbers only, like 185000.';
-    if (form.status === 'completed' && form.end && form.start && form.end < form.start) e.end = 'The end date is before the start date.';
+    if (form.end && form.start && form.end < form.start) e.end = 'The end date is before the start date.';
     setErrors(e);
     if (Object.keys(e).length) return;
 
@@ -51,7 +51,7 @@ export default function ContractForm({ contract, contactId, contacts, organizati
       value: value ? Math.round(Number(value)) : 0,
       status: form.status,
       start: fromDateInput(form.start),
-      end: form.status === 'completed' ? fromDateInput(form.end) || new Date().toISOString() : null,
+      end: form.status === 'completed' ? fromDateInput(form.end) || new Date().toISOString() : fromDateInput(form.end),
     });
     setSaving(false);
     onClose();
@@ -112,13 +112,11 @@ export default function ContractForm({ contract, contactId, contacts, organizati
           <span>Start date</span>
           <input type="date" value={form.start} onChange={set('start')} />
         </label>
-        {form.status === 'completed' && (
-          <label className="field">
-            <span>End date</span>
-            <input type="date" value={form.end} onChange={set('end')} aria-invalid={!!errors.end} />
-            {errors.end && <small className="field-error">{errors.end}</small>}
-          </label>
-        )}
+        <label className="field">
+          <span>{form.status === 'completed' ? 'End date' : 'Expected end date'}</span>
+          <input type="date" value={form.end} onChange={set('end')} aria-invalid={!!errors.end} />
+          {errors.end && <small className="field-error">{errors.end}</small>}
+        </label>
       </div>
     </Drawer>
   );

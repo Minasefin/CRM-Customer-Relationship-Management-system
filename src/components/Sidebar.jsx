@@ -1,8 +1,8 @@
 import Icon from './Icon.jsx';
 
 const main = [
+  { id: 'home', label: 'Home', icon: 'home' },
   { id: 'contacts', label: 'Contacts', icon: 'contacts' },
-  { id: 'recent', label: 'Recently added', icon: 'recent' },
   { id: 'orgs', label: 'Organizations', icon: 'orgs' },
   { id: 'contracts', label: 'Contracts', icon: 'contracts' },
   { id: 'stats', label: 'Statistics', icon: 'stats' },

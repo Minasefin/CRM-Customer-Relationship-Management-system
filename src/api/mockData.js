@@ -5,10 +5,11 @@ const DAY = 24 * 60 * 60 * 1000;
 const daysAgo = (n) => new Date(Date.now() - n * DAY).toISOString();
 
 export const organizations = [
-  { id: 'org-1', name: 'Ironclad Security Group', country: 'United States', city: 'Arlington, VA', logo: null },
-  { id: 'org-2', name: 'Northwind Tactical', country: 'United Kingdom', city: 'Hereford', logo: null },
-  { id: 'org-3', name: 'Summit Ridge Logistics', country: 'Kenya', city: 'Nairobi', logo: null },
-  { id: 'org-4', name: 'Granite Point Defense', country: 'United Arab Emirates', city: 'Abu Dhabi', logo: null },
+  { id: 'org-1', name: 'Ironclad Security Group', country: 'United States', city: 'Arlington, VA', logo: null, archived: false, createdAt: daysAgo(900) },
+  { id: 'org-2', name: 'Northwind Tactical', country: 'United Kingdom', city: 'Hereford', logo: null, archived: false, createdAt: daysAgo(1100) },
+  { id: 'org-3', name: 'Summit Ridge Logistics', country: 'Kenya', city: 'Nairobi', logo: null, archived: false, createdAt: daysAgo(200) },
+  { id: 'org-4', name: 'Granite Point Defense', country: 'United Arab Emirates', city: 'Abu Dhabi', logo: null, archived: false, createdAt: daysAgo(950) },
+  { id: 'org-5', name: 'Harbor Line Services', country: 'Djibouti', city: 'Djibouti', logo: null, archived: false, createdAt: daysAgo(2) }, // no people yet: can be deleted
 ];
 
 const c = (id, firstName, lastName, orgId, title, skills, status, createdDaysAgo, noteDays, extra = {}) => ({
@@ -52,7 +53,7 @@ export const contacts = [
 ];
 
 export const contracts = [
-  { id: 'k-1', contactId: 'c-101', orgId: 'org-1', title: 'Site security detail', location: 'Erbil, Iraq', value: 185000, status: 'active', start: daysAgo(60), end: null },
+  { id: 'k-1', contactId: 'c-101', orgId: 'org-1', title: 'Site security detail', location: 'Erbil, Iraq', value: 185000, status: 'active', start: daysAgo(60), end: daysAgo(-18) },
   { id: 'k-2', contactId: 'c-104', orgId: 'org-3', title: 'Convoy logistics', location: 'Nairobi, Kenya', value: 92000, status: 'active', start: daysAgo(20), end: null },
   { id: 'k-3', contactId: 'c-103', orgId: 'org-2', title: 'Aviation support', location: 'Djibouti', value: 240000, status: 'completed', start: daysAgo(400), end: daysAgo(150) },
   { id: 'k-4', contactId: 'c-105', orgId: 'org-4', title: 'Facility risk review', location: 'Abu Dhabi, UAE', value: 48000, status: 'completed', start: daysAgo(300), end: daysAgo(240) },

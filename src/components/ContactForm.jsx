@@ -210,9 +210,11 @@ export default function ContactForm({ contact, organizations, contacts, onSave, 
             <span>Organization</span>
             <select value={form.orgId} onChange={set('orgId')}>
               <option value="">Independent (no organization)</option>
-              {organizations.map((o) => (
-                <option key={o.id} value={o.id}>{o.name}</option>
-              ))}
+              {organizations
+                .filter((o) => !o.archived || o.id === start.orgId)
+                .map((o) => (
+                  <option key={o.id} value={o.id}>{o.name}{o.archived ? ' (archived)' : ''}</option>
+                ))}
               <option value={NEW_ORG}>+ New organization…</option>
             </select>
           </label>

@@ -5,6 +5,7 @@ import { freshness } from '../lib/freshness.js';
 import { useSettings } from '../hooks/useSettings.js';
 import SortSelect, { useSort } from '../components/SortSelect.jsx';
 import { contactSorts } from '../lib/sorting.js';
+import { soundsLike } from '../lib/soundex.js';
 
 const filters = [
   { id: 'all', label: 'Everyone' },
@@ -32,18 +33,23 @@ export default function ContactsPage({ contacts, orgsById, onOpen, onAdd }) {
   }, [active, settings]);
 
   const q = query.trim().toLowerCase();
-  const shown = active
-    .filter((c) => {
-      if (filter === 'all') return true;
-      const l = freshness(c, settings).level;
-      return filter === 'overdue' ? l === 'overdue' || l === 'never' : l === filter;
-    })
-    .filter((c) => {
-      if (!q) return true;
-      const hay = [c.firstName, c.lastName, c.title, c.orgId ? orgsById[c.orgId]?.name : 'Independent', ...c.skills].join(' ').toLowerCase();
-      return hay.includes(q);
-    })
-    .sort(contactSorts.find((o) => o.id === sort).fn);
+  const sorter = contactSorts.find((o) => o.id === sort).fn;
+  const inFilter = active.filter((c) => {
+    if (filter === 'all') return true;
+    const l = freshness(c, settings).level;
+    return filter === 'overdue' ? l === 'overdue' || l === 'never' : l === filter;
+  });
+  const exact = (c) => {
+    const hay = [c.firstName, c.lastName, c.title, c.orgId ? orgsById[c.orgId]?.name : 'Independent', ...c.skills].join(' ').toLowerCase();
+    return hay.includes(q);
+  };
+  // Soundex: names that sound like what was typed ("Smyth" finds "Smith").
+  // Every typed word has to sound like the person's first or last name.
+  const words = q.split(/\s+/).filter((w) => /[a-z]/.test(w));
+  const soundAlike = (c) => words.length > 0 && words.every((w) => soundsLike(w, c.firstName) || soundsLike(w, c.lastName));
+
+  const shown = inFilter.filter((c) => !q || exact(c)).sort(sorter);
+  const alike = q ? inFilter.filter((c) => !exact(c) && soundAlike(c)).sort(sorter) : [];
 
   return (
     <>
@@ -82,17 +88,32 @@ export default function ContactsPage({ contacts, orgsById, onOpen, onAdd }) {
         <SortSelect value={sort} onChange={setSort} options={contactSorts} />
       </div>
 
-      {shown.length === 0 ? (
+      {shown.length === 0 && alike.length === 0 ? (
         <div className="empty">
-          <p>{query ? `No contacts match “${query}”.` : 'Nobody in this group right now.'}</p>
+          <p>{query ? `No contacts match “${query}”, and no names sound like it.` : 'Nobody in this group right now.'}</p>
           <button className="btn-ghost" onClick={() => { setQuery(''); setFilter('all'); }}>Clear search</button>
         </div>
       ) : (
-        <div className="grid">
-          {shown.map((c) => (
-            <ContactCard key={c.id} contact={c} org={orgsById[c.orgId]} onOpen={onOpen} />
-          ))}
-        </div>
+        <>
+          {shown.length > 0 && (
+            <div className="grid">
+              {shown.map((c) => (
+                <ContactCard key={c.id} contact={c} org={orgsById[c.orgId]} onOpen={onOpen} />
+              ))}
+            </div>
+          )}
+          {alike.length > 0 && (
+            <section className={'sounds-like' + (shown.length === 0 ? ' is-only' : '')}>
+              <h2>{shown.length === 0 ? `No exact matches. These names sound like “${query.trim()}”` : `Names that sound like “${query.trim()}”`}</h2>
+              <p className="muted small">Found by how the name sounds, in case it was spelled differently.</p>
+              <div className="grid">
+                {alike.map((c) => (
+                  <ContactCard key={c.id} contact={c} org={orgsById[c.orgId]} onOpen={onOpen} />
+                ))}
+              </div>
+            </section>
+          )}
+        </>
       )}
     </>
   );

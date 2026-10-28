@@ -579,3 +579,9 @@ select, .days-input input {
 .contract-notes { margin: 8px 0 0; font-size: 13px; line-height: 1.45; color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
 .contract-notes.clamp { max-width: 340px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
 .status-pill { white-space: nowrap; }
+
+/* Soundex "sounds like" results */
+.sounds-like { margin-top: 32px; padding-top: 24px; border-top: 1px dashed var(--line); }
+.sounds-like h2 { margin: 0; font-size: 17px; letter-spacing: -0.01em; }
+.sounds-like > p { margin: 4px 0 16px; }
+.sounds-like.is-only { margin-top: 4px; padding-top: 0; border-top: 0; }

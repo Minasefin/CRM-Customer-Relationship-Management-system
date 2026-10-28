@@ -12,3 +12,6 @@ Thumbs.db
 *.db-journal
 .env
 .env.*
+
+# Built installers
+release/

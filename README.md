@@ -16,6 +16,19 @@ npm run dev:web    # UI only, in your browser at http://localhost:5173
 
 The UI uses made-up test data from `src/api/mockData.js` until the database layer is connected.
 
+## Build the installers
+
+```bash
+npm run dist   # builds the installer for the computer you're on, into release/
+```
+
+GitHub builds all three (Mac `.dmg`, Windows Setup `.exe`, Linux `.AppImage`) automatically:
+
+- **Testing:** on a pull request that changes packaging, open the **Installers** check → **Summary** → **Artifacts** to download them.
+- **Releasing:** bump `version` in `package.json`, then push a tag like `v0.1.0` (`git tag v0.1.0 && git push origin v0.1.0`). A **draft** release with all three installers appears under **Releases**. Check it and click **Publish**.
+
+The apps aren't signed with a paid certificate, so Mac and Windows warn once on first open. `build/Read Me First.html` walks through it and ships inside the Mac installer.
+
 ## Folders
 
 | Folder | Owner | What's in it |

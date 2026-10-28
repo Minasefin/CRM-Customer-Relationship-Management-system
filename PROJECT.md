@@ -28,7 +28,7 @@ Update this section whenever something lands, so everyone (and their AI tools) k
 | UI (Mina) | App shell, sidebar, contact grid, settings, auto light/dark, contact profile (notes, call/text, status, work history), add/edit forms for contacts, orgs and contracts, firm pages, On contract/Available labels, Statistics page, Home page, ⋯ menus with archive/delete, sort dropdowns done with mock data | Login and first-time setup screens, then swap mock data for real functions |
 | Database (Adrian) | Draft schema in `database/schema.sql`; nothing built yet | Review `docs/API.md`, set up encrypted SQLite, implement Organizations/Contacts/Contracts functions |
 | Auth (Nic) | Notes in `auth/README.md`; nothing built yet | Review `docs/API.md`, agree on key hand-off with Adrian, implement Auth functions |
-| Shared | `docs/API.md` is a draft | All three agree on it, then build against it |
+| Shared | `docs/API.md` is a draft. Installers for Mac/Windows/Linux build on GitHub | All three agree on `docs/API.md`; tag `v0.1.0` for the Oct 31 release |
 
 ## What the app stores
 

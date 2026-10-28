@@ -1,0 +1,65 @@
+# Builds the installers: Mac .dmg, Windows Setup .exe, Linux .AppImage.
+#   npm run dist        (installer for the computer you're on)
+# The GitHub "Installers" workflow builds all three.
+appId: edu.tntech.contractorcrm
+productName: Contractor CRM
+copyright: Mina, Adrian and Nic
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**/*
+  - electron/**/*
+  - package.json
+asar: true
+
+# Security switches baked into the app (see SECURITY.md):
+# no running as plain Node, no debug flags, no NODE_OPTIONS, and the app's code
+# can't be swapped out after it's built.
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+
+mac:
+  category: public.app-category.business
+  target:
+    - target: dmg
+      arch: universal # one download for Apple Silicon and Intel Macs
+  # No paid Apple certificate: ad-hoc signed so it runs on Apple Silicon.
+  # The Mac will warn once on first open; Read Me First explains the fix.
+  identity: '-'
+  hardenedRuntime: false
+  artifactName: Contractor-CRM-${version}-mac.${ext}
+
+dmg:
+  title: Contractor CRM
+  background: build/background.png
+  iconSize: 80
+  window:
+    width: 540
+    height: 420
+  contents:
+    - { x: 140, y: 168, type: file }
+    - { x: 400, y: 168, type: link, path: /Applications }
+    - { x: 270, y: 340, type: file, path: build/Read Me First.html }
+
+win:
+  target:
+    - target: nsis
+      arch: x64
+  artifactName: Contractor-CRM-${version}-windows-setup.${ext}
+
+nsis:
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: true
+  shortcutName: Contractor CRM
+
+linux:
+  target: AppImage
+  category: Office
+  artifactName: Contractor-CRM-${version}-linux.${ext}

@@ -1,0 +1,101 @@
+# Builds the Mac, Windows and Linux installers on GitHub's computers.
+# - On a pull request that touches packaging: builds all three and checks each app opens.
+#   Download them from the run's "Artifacts" section to test.
+# - When a version tag like v0.1.0 is pushed: also creates a draft GitHub Release with the
+#   three installers attached. Review it on the Releases page and click Publish.
+name: Installers
+
+on:
+  pull_request:
+    paths:
+      - package.json
+      - package-lock.json
+      - electron-builder.yml
+      - electron/**
+      - build/**
+      - .github/workflows/installers.yml
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Mac, os: macos-latest, flag: --mac }
+          - { name: Windows, os: windows-latest, flag: --win }
+          - { name: Linux, os: ubuntu-latest, flag: --linux }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check:secrets
+      - run: npm run build
+      - name: Build installer
+        run: npx electron-builder ${{ matrix.flag }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false' # no paid signing certificate
+
+      - name: Check the Mac app opens
+        if: runner.os == 'macOS'
+        run: |
+          APP="release/mac-universal/Contractor CRM.app"
+          codesign --verify --deep "$APP" && echo "Signature OK (ad-hoc)"
+          "$APP/Contents/MacOS/Contractor CRM" & PID=$!
+          sleep 15
+          kill -0 $PID && echo "App is running" && kill $PID
+      - name: Check the Windows app opens
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath "release/win-unpacked/Contractor CRM.exe" -PassThru
+          Start-Sleep -Seconds 15
+          if ($p.HasExited) { Write-Error "App exited with code $($p.ExitCode)"; exit 1 }
+          Write-Host "App is running"; Stop-Process -Id $p.Id
+      - name: Check the Linux app opens
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb libfuse2 > /dev/null
+          xvfb-run -a release/linux-unpacked/contractor-crm & sleep 15
+          pgrep -f linux-unpacked/contractor-crm > /dev/null && echo "App is running"
+          pkill -f linux-unpacked/contractor-crm || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.name }}
+          path: |
+            release/*.dmg
+            release/*-setup.exe
+            release/*.AppImage
+          if-no-files-found: error
+
+  release:
+    name: Draft GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: installers
+          merge-multiple: true
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp "build/Read Me First.html" installers/Read-Me-First.html
+          gh release create "$GITHUB_REF_NAME" installers/* \
+            --draft --title "Contractor CRM $GITHUB_REF_NAME" --notes-file build/RELEASE_NOTES.md

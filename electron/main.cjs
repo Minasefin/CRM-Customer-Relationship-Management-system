@@ -61,7 +61,23 @@ app.on('web-contents-created', (_event, contents) => {
   contents.on('will-attach-webview', (event) => event.preventDefault());
 });
 
+// Only one copy of the app can run. Opening it again just brings the existing window forward,
+// so there's never a second window popping up after you quit the first.
+const isFirstCopy = app.requestSingleInstanceLock();
+if (!isFirstCopy) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (!win) return createWindow();
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
+  });
+}
+
 app.whenReady().then(() => {
+  if (!isFirstCopy) return; // a copy is already open; it was just brought to the front
   // The app needs no camera, microphone, location, notifications, etc. Deny every request.
   session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
   session.defaultSession.setPermissionCheckHandler(() => false);
@@ -77,6 +93,5 @@ app.whenReady().then(() => {
   });
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
+// One-window app: closing the window (red ✕ on Mac) quits it on every system.
+app.on('window-all-closed', () => app.quit());

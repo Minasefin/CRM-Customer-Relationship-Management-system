@@ -70,5 +70,5 @@ Contact = {
 }
 Note = { id, at, text }
 Employment = { id, contactId, orgId, start, end }          // end: null while current
-Contract = { id, contactId, orgId, title, location, value, status, start, end } // status: 'active' | 'completed'; end on an active contract = expected end date (or null)
+Contract = { id, contactId, orgId, title, location, value, status, start, end, notes } // notes: free text, '' if none; status: 'active' | 'completed'; end on an active contract = expected end date (or null)
 ```

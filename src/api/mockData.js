@@ -53,7 +53,7 @@ export const contacts = [
 ];
 
 export const contracts = [
-  { id: 'k-1', contactId: 'c-101', orgId: 'org-1', title: 'Site security detail', location: 'Erbil, Iraq', value: 185000, status: 'active', start: daysAgo(60), end: daysAgo(-18) },
+  { id: 'k-1', contactId: 'c-101', orgId: 'org-1', title: 'Site security detail', location: 'Erbil, Iraq', value: 185000, status: 'active', start: daysAgo(60), end: daysAgo(-18), notes: 'Paid monthly. Site lead is Capt. R. Ames. Marcus wants to extend through spring.' },
   { id: 'k-2', contactId: 'c-104', orgId: 'org-3', title: 'Convoy logistics', location: 'Nairobi, Kenya', value: 92000, status: 'active', start: daysAgo(20), end: null },
   { id: 'k-3', contactId: 'c-103', orgId: 'org-2', title: 'Aviation support', location: 'Djibouti', value: 240000, status: 'completed', start: daysAgo(400), end: daysAgo(150) },
   { id: 'k-4', contactId: 'c-105', orgId: 'org-4', title: 'Facility risk review', location: 'Abu Dhabi, UAE', value: 48000, status: 'completed', start: daysAgo(300), end: daysAgo(240) },

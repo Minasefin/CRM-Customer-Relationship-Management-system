@@ -222,6 +222,7 @@ export default function ContactProfile({ contact, org, orgsById, contracts, onBa
                       <div className="contract-title">{k.title}</div>
                       <div className="muted small">{[k.location, money(k.value)].filter(Boolean).join(', ')}</div>
                       <span className={`status-pill status-${k.status}`}>{k.status === 'active' ? 'On contract' : 'Completed'}</span>
+                      {k.notes && <p className="contract-notes">{k.notes}</p>}
                     </button>
                   </li>
                 ))}

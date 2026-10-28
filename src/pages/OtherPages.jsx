@@ -125,7 +125,11 @@ export function ContractsPage({ contracts, contactsById, orgsById, onAddContract
                     onClick={() => onEditContract(k.id)}
                     onKeyDown={(e) => e.key === 'Enter' && onEditContract(k.id)}
                   >
-                    <td>{k.title}<div className="muted small">{k.orgId ? orgsById[k.orgId]?.name : 'Independent'}</div></td>
+                    <td>
+                      {k.title}
+                      <div className="muted small">{k.orgId ? orgsById[k.orgId]?.name : 'Independent'}</div>
+                      {k.notes && <div className="contract-notes clamp">{k.notes}</div>}
+                    </td>
                     <td>{p ? `${p.firstName} ${p.lastName}` : '—'}</td>
                     <td>{k.location}</td>
                     <td className="num">{money(k.value)}</td>

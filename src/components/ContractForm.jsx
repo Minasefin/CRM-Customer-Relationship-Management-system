@@ -14,6 +14,7 @@ export default function ContractForm({ contract, contactId, contacts, organizati
     status: contract?.status || 'active',
     start: toDateInput(contract?.start) || new Date().toISOString().slice(0, 10),
     end: toDateInput(contract?.end),
+    notes: contract?.notes || '',
   };
   const [form, setForm] = useState(start);
   const [errors, setErrors] = useState({});
@@ -52,6 +53,7 @@ export default function ContractForm({ contract, contactId, contacts, organizati
       status: form.status,
       start: fromDateInput(form.start),
       end: form.status === 'completed' ? fromDateInput(form.end) || new Date().toISOString() : fromDateInput(form.end),
+      notes: form.notes.trim(),
     });
     setSaving(false);
     onClose();
@@ -116,6 +118,15 @@ export default function ContractForm({ contract, contactId, contacts, organizati
           <span>{form.status === 'completed' ? 'End date' : 'Expected end date'}</span>
           <input type="date" value={form.end} onChange={set('end')} aria-invalid={!!errors.end} />
           {errors.end && <small className="field-error">{errors.end}</small>}
+        </label>
+        <label className="field span-2">
+          <span>Notes</span>
+          <textarea
+            rows={5}
+            value={form.notes}
+            onChange={set('notes')}
+            placeholder="Terms, point of contact on site, payment schedule, anything worth remembering"
+          />
         </label>
       </div>
     </Drawer>

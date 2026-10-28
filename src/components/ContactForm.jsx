@@ -5,6 +5,7 @@ import TagInput from './TagInput.jsx';
 import Icon from './Icon.jsx';
 import { OrgFields } from './OrgForm.jsx';
 import { DiscardBar, sameName } from './formBits.jsx';
+import { soundsLike } from '../lib/soundex.js';
 
 const NEW_ORG = '__new';
 const phoneLabels = ['Mobile', 'Work', 'Home', 'Other'];
@@ -95,6 +96,11 @@ export default function ContactForm({ contact, organizations, contacts, onSave, 
 
   const allSkills = useMemo(() => [...new Set(contacts.flatMap((c) => c.skills))].sort(), [contacts]);
   const duplicate = !isEdit && contacts.find((c) => sameName(`${c.firstName} ${c.lastName}`, `${form.firstName} ${form.lastName}`) && form.lastName.trim());
+  // Soundex: a name spelled differently but pronounced the same ("Markus Hail" vs "Marcus Hale").
+  const soundAlike =
+    !isEdit &&
+    !duplicate &&
+    contacts.find((c) => soundsLike(form.firstName, c.firstName) && soundsLike(form.lastName, c.lastName));
 
   const orgName = (id) => (id ? organizations.find((o) => o.id === id)?.name : 'Independent');
   const orgChanged = isEdit && (contact.orgId || '') !== form.orgId;
@@ -200,6 +206,12 @@ export default function ContactForm({ contact, organizations, contacts, onSave, 
             <p className="warn span-2">
               {duplicate.firstName} {duplicate.lastName} is already in your contacts.{' '}
               <button type="button" className="link-btn" onClick={() => onOpenExisting(duplicate.id)}>Open them instead</button>
+            </p>
+          )}
+          {soundAlike && (
+            <p className="warn span-2">
+              This sounds like {soundAlike.firstName} {soundAlike.lastName}, who's already in your contacts. Same person?{' '}
+              <button type="button" className="link-btn" onClick={() => onOpenExisting(soundAlike.id)}>Open {soundAlike.firstName}</button>
             </p>
           )}
           <label className="field span-2">

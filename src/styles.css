@@ -574,3 +574,9 @@ select, .days-input input {
 @media (max-width: 1100px) {
   .home-grid { grid-template-columns: 1fr; }
 }
+
+/* Soundex "sounds like" results */
+.sounds-like { margin-top: 32px; padding-top: 24px; border-top: 1px dashed var(--line); }
+.sounds-like h2 { margin: 0; font-size: 17px; letter-spacing: -0.01em; }
+.sounds-like > p { margin: 4px 0 16px; }
+.sounds-like.is-only { margin-top: 4px; padding-top: 0; border-top: 0; }

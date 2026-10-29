@@ -23,7 +23,7 @@ All functions are async and return plain objects. Dates are ISO strings (`2026-1
 | `createOrganization(data)` | `Organization` |
 | `updateOrganization(id, data)` | `Organization` |
 | `archiveOrganization(id, archived)` | `Organization` |
-| `deleteOrganization(id)` | `{ ok }` |
+
 
 ## Contacts (Adrian)
 
@@ -39,7 +39,7 @@ All functions are async and return plain objects. Dates are ISO strings (`2026-1
 | `getAllEmployment()` | `Employment[]` | Everyone's work history, for the Statistics page and firm pages |
 | `addNote(contactId, text)` | `Note` | Timestamp set by the database |
 
-**Organization rules:** `updateOrganization` ignores `archived` and `createdAt`. `archiveOrganization(id, true)` hides a firm from lists and keeps everything; `false` restores it. `deleteOrganization` must refuse (throw with `userMessage`) if any contact, employment row or contract points to the firm. Only empty firms can be deleted.
+**Organization rules:** updateOrganization ignores archived and createdAt. archiveOrganization hides/restores the firm without changing linked contacts or contracts. Organizations and contracts are never deleted.
 
 ## Contracts (Adrian)
 
@@ -48,7 +48,7 @@ All functions are async and return plain objects. Dates are ISO strings (`2026-1
 | `getContracts()` | `Contract[]` |
 | `createContract(data)` | `Contract` |
 | `updateContract(id, data)` | `Contract` |
-| `deleteContract(id)` | `{ ok }` |
+| `archiveContract(id, archived)` | `Contract` |
 
 ## Shapes
 
@@ -70,5 +70,18 @@ Contact = {
 }
 Note = { id, at, text }
 Employment = { id, contactId, orgId, start, end }          // end: null while current
-Contract = { id, contactId, orgId, title, location, value, status, start, end, notes } // notes: free text, '' if none; status: 'active' | 'completed'; end on an active contract = expected end date (or null)
+Contract = { id, contactId, orgId, title, location, value, status, start, end, notes, archived } // notes: free text, '' if none; status: 'active' | 'completed'; end on an active contract = expected end date (or null)
 ```
+
+## Database implementation proposal for teammate review
+
+Approved by Adrian for this branch; UI/auth integration must adopt these changes together:
+- Remove deleteOrganization and deleteContract; use archiveOrganization and archiveContract(id, archived = true).
+- Contract adds archived: boolean, initially false. Archiving does not complete a contract.
+- Add updateNote(noteId, text) -> Note. Preserve at and retain prior text internally.
+- List functions include archived records. Historical references remain resolvable.
+- Contract value is a nonnegative safe integer in whole USD, or null when unknown.
+- New contracts must match their contact's current orgId, including null for Independent. Existing associations remain unchanged after moves and cannot be edited.
+- Contact creation starts active; protected fields cannot be supplied to override IDs, timestamps or notes.
+- Not-found and invalid operations reject with a safe userMessage.
+- Internal lifecycle: openDatabase(key: Buffer[32]), closeDatabase(), isOpen(), rekeyDatabase(newKey: Buffer[32]). These synchronous main-process functions are not renderer API methods. See database/README.md.

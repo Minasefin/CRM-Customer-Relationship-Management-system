@@ -1,0 +1,48 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const {mkdtempSync,readFileSync,rmSync}=require('node:fs');
+const {tmpdir}=require('node:os');
+const path=require('node:path');
+const {randomBytes}=require('node:crypto');
+const {createDatabase}=require('./index.cjs');
+test('encrypted persistence, history, archives, correction, rollback and rekey',async()=>{
+ const dir=mkdtempSync(path.join(tmpdir(),'crm-test-')), file=path.join(dir,'test.db');
+ const db=createDatabase(file), key=randomBytes(32), next=randomBytes(32);
+ try {
+  assert.throws(()=>db.openDatabase(Buffer.alloc(1)));
+  db.openDatabase(key);
+  const a=await db.createOrganization({name:'Synthetic A'});
+  const b=await db.createOrganization({name:'Synthetic B'});
+  const c=await db.createContact({firstName:'Synthetic',lastName:'Person',orgId:a.id,phones:[{label:'Mobile',number:'+000123'}],skills:['Testing'],social:{x:'fake'}});
+  assert.equal(c.phones[0].number,'+000123');
+  const k=await db.createContract({contactId:c.id,title:'Synthetic contract',value:100});
+  await assert.rejects(db.createContract({contactId:c.id,title:'bad',value:1.5}));
+  await assert.rejects(db.updateContact(c.id,{firstName:'Changed',phones:[{label:'INVALID',number:'x'}]}));
+  assert.equal((await db.getContact(c.id)).firstName,'Synthetic');
+  await db.moveContact(c.id,b.id);
+  assert.equal((await db.getEmploymentHistory(c.id)).length,2);
+  await db.moveContact(c.id,b.id);
+  assert.equal((await db.getEmploymentHistory(c.id)).length,2);
+  assert.equal((await db.getContracts())[0].orgId,a.id);
+  const n=await db.addNote(c.id,'Synthetic note');
+  assert.equal((await db.updateNote(n.id,'Corrected synthetic note')).at,n.at);
+  await db.archiveOrganization(a.id,true);
+  await db.archiveContract(k.id,true);
+  await db.setContactStatus(c.id,'deceased');
+  db.closeDatabase();
+  assert.notEqual(readFileSync(file).subarray(0,16).toString(),'SQLite format 3\0');
+  assert.equal(readFileSync(file).includes(Buffer.from('Synthetic')),false);
+  assert.throws(()=>db.openDatabase(randomBytes(32)));
+  assert.equal(db.isOpen(),false);
+  db.openDatabase(key);
+  assert.equal((await db.getContracts())[0].archived,true);
+  assert.equal((await db.getContact(c.id)).notes[0].text,'Corrected synthetic note');
+  db.rekeyDatabase(next); db.closeDatabase();
+  assert.throws(()=>db.openDatabase(key));
+  db.openDatabase(next);
+  await db.moveContact(c.id,null);
+  assert.equal((await db.getContact(c.id)).orgId,null);
+  db.closeDatabase();
+  await assert.rejects(db.getContacts());
+ } finally {db.closeDatabase();rmSync(dir,{recursive:true,force:true});}
+});

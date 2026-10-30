@@ -23,6 +23,9 @@ files:
 asarUnpack:
   - node_modules/better-sqlite3-multiple-ciphers/**/*
 asar: true
+# The database module ships ready-made compiled files that work in Electron, so skip
+# compiling it (no C++ tools needed to build the installers).
+npmRebuild: false
 
 # Security switches baked into the app (see SECURITY.md):
 # no running as plain Node, no debug flags, no NODE_OPTIONS, and the app's code

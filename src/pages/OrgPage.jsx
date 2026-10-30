@@ -5,8 +5,8 @@ import { formatDate } from '../lib/freshness.js';
 import MoreMenu from '../components/MoreMenu.jsx';
 import { orgMenu } from './OtherPages.jsx';
 import { useActions } from '../lib/dataContext.js';
+import { money } from '../lib/money.js';
 
-const money = (n) => n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
 // Everyone at one firm: current people, people who used to work there, and its contracts.
 export default function OrgPage({ org, contacts, contactsById, contracts, employment, onBack, onEdit, onOpen, onEditContract }) {

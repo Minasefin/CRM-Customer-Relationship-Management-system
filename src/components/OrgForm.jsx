@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Drawer from './Drawer.jsx';
 import ImagePicker from './ImagePicker.jsx';
-import { DiscardBar, orgInitials, sameName } from './formBits.jsx';
+import { DiscardBar, orgInitials, sameName, SaveError, errorText } from './formBits.jsx';
 
 const blank = { name: '', city: '', country: '', logo: null };
 
@@ -43,6 +43,7 @@ export default function OrgForm({ org, organizations, onSave, onClose }) {
   const [error, setError] = useState('');
   const [leaving, setLeaving] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const dirty = JSON.stringify(form) !== JSON.stringify(start);
 
   const duplicate = organizations.find((o) => o.id !== org?.id && sameName(o.name, form.name));
@@ -50,7 +51,13 @@ export default function OrgForm({ org, organizations, onSave, onClose }) {
   const save = async () => {
     if (!form.name.trim()) return setError('Add the organization name.');
     setSaving(true);
-    await onSave({ name: form.name.trim(), city: form.city.trim(), country: form.country.trim(), logo: form.logo });
+    setSaveError('');
+    try {
+      await onSave({ name: form.name.trim(), city: form.city.trim(), country: form.country.trim(), logo: form.logo });
+    } catch (err) {
+      setSaving(false);
+      return setSaveError(errorText(err));
+    }
     setSaving(false);
     onClose();
   };
@@ -65,12 +72,15 @@ export default function OrgForm({ org, organizations, onSave, onClose }) {
         leaving ? (
           <DiscardBar onDiscard={onClose} onKeep={() => setLeaving(false)} />
         ) : (
-          <div className="btn-row">
-            <button className="btn-primary" onClick={save} disabled={saving}>
-              {org ? 'Save changes' : 'Add organization'}
-            </button>
-            <button className="btn-ghost" onClick={requestClose}>Cancel</button>
-          </div>
+          <>
+            <SaveError message={saveError} />
+            <div className="btn-row">
+              <button className="btn-primary" onClick={save} disabled={saving}>
+                {org ? 'Save changes' : 'Add organization'}
+              </button>
+              <button className="btn-ghost" onClick={requestClose}>Cancel</button>
+            </div>
+          </>
         )
       }
     >

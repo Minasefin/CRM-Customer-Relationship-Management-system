@@ -46,8 +46,8 @@ jobs:
         # If it fails, the last error lines show up on the check itself.
         run: |
           set -o pipefail
-          npx electron-builder ${{ matrix.flag }} --publish never 2>&1 | tee build.log || {
-            grep -iE "error|⨯|failed|cannot|expected" build.log | tail -8 | while IFS= read -r l; do echo "::error title=Build installer::${l//%/%25}"; done
+          npx electron-builder ${{ matrix.flag }} --publish never 2>&1 | tee "$RUNNER_TEMP/build.log" || {
+            grep -iE "error|⨯|failed|cannot|expected" "$RUNNER_TEMP/build.log" | tail -8 | while IFS= read -r l; do echo "::error title=Build installer::${l//%/%25}"; done
             exit 1
           }
         env:

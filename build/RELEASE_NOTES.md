@@ -21,4 +21,10 @@ Your computer will block the app once, because it isn't from the App Store or Mi
 
 **Linux:** make the AppImage executable (`chmod +x`), then open it.
 
+## First launch
+
+The app asks you to **create a password** (at least 15 characters; a few random words works well). Everything you save is encrypted on your computer with it, and you'll enter it each time you open the app. **There is no password reset**, so keep it somewhere safe.
+
+The app locks itself after 15 minutes without use, and when your computer sleeps or its screen locks. To look around first, choose **Look around with sample data** (nothing is saved).
+
 Contractor CRM works completely offline. Everything you enter stays on your computer.

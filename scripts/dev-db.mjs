@@ -33,7 +33,12 @@ const stamp = () => `${electronVersion} ${existsSync(nativeFile) ? statSync(nati
 const builtFor = existsSync(marker) ? readFileSync(marker, 'utf8').trim() : '';
 if (builtFor !== stamp()) {
   console.log(`Building the database module for Electron ${electronVersion} (first time only, takes a minute)...`);
-  const r = spawnSync('npx', ['electron-rebuild', '--force', '--only', 'better-sqlite3-multiple-ciphers'], { stdio: 'inherit', shell: true });
+  // --no-install: use the copy in this project (from npm install), never download a different one.
+  if (!existsSync('node_modules/@electron/rebuild')) {
+    console.error('\nRun npm install first, then npm run dev:db again.');
+    process.exit(1);
+  }
+  const r = spawnSync('npx', ['--no-install', 'electron-rebuild', '--force', '--only', 'better-sqlite3-multiple-ciphers'], { stdio: 'inherit', shell: true });
   if (r.status !== 0) {
     console.error('\nCould not build the database module. On Windows, install "Desktop development with C++"');
     console.error('from Visual Studio Build Tools. On Mac, run: xcode-select --install');

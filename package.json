@@ -12,7 +12,9 @@
     "start": "npm run build && electron .",
     "check:secrets": "node scripts/check-secrets.mjs",
     "dev:db": "node scripts/dev-db.mjs",
-    "test:db": "node --test database/database.test.cjs"
+    "test:db": "node --test database/database.test.cjs",
+    "test:auth": "node --test auth/auth.test.cjs",
+    "test:auth:electron": "node auth/run-electron-smoke.cjs"
   },
   "dependencies": {
     "@fontsource-variable/plus-jakarta-sans": "^5.1.0",

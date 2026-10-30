@@ -5,7 +5,9 @@
 import * as mock from './mockData.js';
 
 const crm = typeof window !== 'undefined' ? window.crm : undefined;
-const real = crm && crm.api;
+// Auth exists even while locked. The preload reloads after login/logout so this
+// selection cannot retain a previous session's data or write samples to disk.
+const real = crm && ['database', 'dev-database'].includes(crm.dataMode) && crm.api;
 
 // 'database' = saved in the encrypted database; 'sample' = sample data, resets on restart.
 export const dataMode = real ? 'database' : 'sample';

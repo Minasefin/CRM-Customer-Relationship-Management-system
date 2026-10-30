@@ -42,3 +42,5 @@ jobs:
         run: npm run build
       - name: Click through the app
         run: xvfb-run -a node tests/e2e-database.mjs
+      - name: Authentication in the real app
+        run: xvfb-run -a npm run test:auth:electron

@@ -17,7 +17,7 @@ import { SettingsContext, useSettingsState, useTheme, nextSwitch } from './hooks
 
 const byId = (list) => Object.fromEntries(list.map((x) => [x.id, x]));
 
-export default function App() {
+export default function App({ exploring = false, canLock = false }) {
   const settingsState = useSettingsState();
   const theme = useTheme(settingsState[0]);
   const [page, setPage] = useState('home');
@@ -211,8 +211,14 @@ export default function App() {
       <DataContext.Provider value={data}>
       <ActionsContext.Provider value={actions}>
         <div className="app">
-          <Sidebar page={page} onNavigate={navigate} counts={counts} theme={theme} onToggleTheme={toggleTheme} dataMode={dataMode} />
+          <Sidebar page={page} onNavigate={navigate} counts={counts} theme={theme} onToggleTheme={toggleTheme} dataMode={dataMode} canLock={canLock} />
           <main className="main">
+            {exploring && (
+              <p className="banner banner-warn" role="status">
+                <strong>You're looking at sample data.</strong> Nothing you add here is saved.{' '}
+                <button className="link-btn" onClick={() => window.location.reload()}>Sign in to your data</button>
+              </p>
+            )}
             {dataError && (
               <p className="banner banner-warn" role="alert">
                 <strong>The test database didn't open.</strong> {dataError} You're seeing sample data, and changes won't be saved.
@@ -254,7 +260,7 @@ export default function App() {
                 {page === 'contracts' && <ContractsPage {...props} />}
                 {page === 'stats' && <StatsPage {...props} />}
                 {page === 'archived' && <ArchivedPage {...props} />}
-                {page === 'settings' && <SettingsPage theme={theme} />}
+                {page === 'settings' && <SettingsPage theme={theme} canLock={canLock} />}
               </>
             )}
           </main>

@@ -9,7 +9,7 @@ const main = [
   { id: 'archived', label: 'Archived', icon: 'archived' },
 ];
 
-export default function Sidebar({ page, onNavigate, counts, theme, onToggleTheme, dataMode }) {
+export default function Sidebar({ page, onNavigate, counts, theme, onToggleTheme, dataMode, canLock }) {
   const item = (it) => (
     <button
       key={it.id}
@@ -37,6 +37,12 @@ export default function Sidebar({ page, onNavigate, counts, theme, onToggleTheme
       <nav className="nav">{main.map(item)}</nav>
       <div className="sidebar-foot">
         {item({ id: 'settings', label: 'Settings', icon: 'settings' })}
+        {canLock && (
+          <button className="nav-item" onClick={() => window.crm.api.logout()} title="Lock now. Your password opens it again.">
+            <Icon name="lock" />
+            <span>Lock</span>
+          </button>
+        )}
         <button
           className="theme-hint"
           onClick={onToggleTheme}

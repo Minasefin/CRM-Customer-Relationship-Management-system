@@ -13,6 +13,13 @@ files:
   - database/index.cjs
   - database/schema.sql
   - package.json
+  # Ship only the compiled database file, not its source code or build leftovers.
+  # (Leftovers differ between Intel and Apple Silicon builds and break the universal Mac app.)
+  - '!node_modules/better-sqlite3-multiple-ciphers/{src,deps,docs,benchmark,test}/**'
+  - '!node_modules/better-sqlite3-multiple-ciphers/build/{Makefile,config.gypi,*.mk,*.gyp,*.gypi,binding.Makefile}'
+  - '!node_modules/better-sqlite3-multiple-ciphers/build/{deps,node_gyp_bins}/**'
+  - '!node_modules/better-sqlite3-multiple-ciphers/build/Release/{obj,obj.target,.deps}/**'
+  - '!node_modules/better-sqlite3-multiple-ciphers/build/Release/{test_extension.node,*.a,*.stamp,.forge-meta}'
 # The encrypted database is a compiled module; it can't run from inside the app archive.
 asarUnpack:
   - node_modules/better-sqlite3-multiple-ciphers/**/*

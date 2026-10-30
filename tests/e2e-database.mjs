@@ -241,7 +241,10 @@ try {
   await step('a wrong key does not open the data and says so', async () => {
     await page.getByText("The test database didn't open.").waitFor();
     assert.equal(await page.evaluate(() => window.crm.dataMode), 'sample');
-    assert.equal(await page.evaluate(() => typeof window.crm.api), 'undefined');
+    // Auth keeps the API exposed while locked; data access must still fail.
+    assert.equal(await page.evaluate(() => typeof window.crm.api.login), 'function');
+    assert.equal(await page.evaluate(() => typeof window.crm.api.getContacts), 'function');
+    await assert.rejects(() => page.evaluate(() => window.crm.api.getContacts()));
     await page.getByText('Sample data, not saved').waitFor();
   });
 

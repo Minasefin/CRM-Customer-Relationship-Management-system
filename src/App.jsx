@@ -11,7 +11,7 @@ import ContactForm from './components/ContactForm.jsx';
 import OrgForm from './components/OrgForm.jsx';
 import ContractForm from './components/ContractForm.jsx';
 import { OrganizationsPage, ContractsPage, ArchivedPage } from './pages/OtherPages.jsx';
-import { api } from './api/index.js';
+import { api, dataMode, dataError } from './api/index.js';
 import { DataContext, ActionsContext } from './lib/dataContext.js';
 import { SettingsContext, useSettingsState, useTheme, nextSwitch } from './hooks/useSettings.js';
 
@@ -23,15 +23,35 @@ export default function App() {
   const [page, setPage] = useState('home');
   const [openId, setOpenId] = useState(null); // contact profile being viewed
   const [openOrgId, setOpenOrgId] = useState(null); // firm page being viewed (under any open profile)
-  const [data, setData] = useState({ organizations: [], contacts: [], contracts: [], employment: [] });
+  const [all, setAll] = useState({ organizations: [], contacts: [], contracts: [], employment: [] });
+  const [loadError, setLoadError] = useState('');
+  const [toast, setToast] = useState('');
+  const errorText = (e) => (e && (e.userMessage || e.message)) || 'Something went wrong. Try again.';
 
   const load = useCallback(
     () =>
-      Promise.all([api.getOrganizations(), api.getContacts(), api.getContracts(), api.getAllEmployment()]).then(
-        ([organizations, contacts, contracts, employment]) => setData({ organizations, contacts, contracts, employment }),
-      ),
+      Promise.all([api.getOrganizations(), api.getContacts(), api.getContracts(), api.getAllEmployment()])
+        .then(([organizations, contacts, contracts, employment]) => {
+          setAll({ organizations, contacts, contracts, employment });
+          setLoadError('');
+        })
+        .catch((e) => setLoadError(errorText(e))),
     [],
   );
+
+  // Archived contracts stay in the database but are left out of every normal view;
+  // only the Archived page shows them.
+  const data = useMemo(
+    () => ({ ...all, contracts: all.contracts.filter((k) => !k.archived) }),
+    [all],
+  );
+  const archivedContracts = useMemo(() => all.contracts.filter((k) => k.archived), [all]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(''), 6000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   useEffect(() => {
     load();
@@ -49,7 +69,10 @@ export default function App() {
     contacts: data.contacts.filter((c) => c.status === 'active').length,
     orgs: data.organizations.filter((o) => !o.archived).length,
     contracts: data.contracts.filter((k) => k.status === 'active').length,
-    archived: data.contacts.filter((c) => c.status !== 'active').length + data.organizations.filter((o) => o.archived).length,
+    archived:
+      data.contacts.filter((c) => c.status !== 'active').length +
+      data.organizations.filter((o) => o.archived).length +
+      archivedContracts.length,
   };
 
   // Sidebar light/dark click. With the time-of-day switch on, it holds until the next
@@ -73,8 +96,14 @@ export default function App() {
     setPage('orgs');
   };
 
+  // These throw on failure so the screen that called them can show the reason.
   const addNote = async (contactId, text) => {
     await api.addNote(contactId, text);
+    await load();
+  };
+
+  const updateNote = async (noteId, text) => {
+    await api.updateNote(noteId, text);
     await load();
   };
 
@@ -115,7 +144,7 @@ export default function App() {
     await load();
   };
 
-  // One confirm box for archive / delete / status changes from the ⋯ menus.
+  // One confirm box for archive / restore / status changes from the ⋯ menus.
   const [confirm, setConfirm] = useState(null);
   const ask = (opts) => setConfirm(opts);
   const done = async (fn) => {
@@ -123,7 +152,8 @@ export default function App() {
     await load();
     setConfirm(null);
   };
-  const money = (n) => (n || 0).toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+  // Restores happen without a confirm box, so show any failure as a message instead.
+  const quietly = (fn) => done(fn).catch((e) => setToast(errorText(e)));
   const statusWords = { active: 'active', inactive: 'left / inactive', deceased: 'deceased' };
 
   const actions = {
@@ -144,27 +174,16 @@ export default function App() {
             confirmLabel: 'Archive',
             onConfirm: () => done(() => api.archiveOrganization(o.id, true)),
           })
-        : done(() => api.archiveOrganization(o.id, false)),
-    deleteOrg: (o) =>
-      ask({
-        title: `Delete ${o.name}?`,
-        message: "It has no people, history or contracts, so nothing else changes. This can't be undone.",
-        confirmLabel: 'Delete organization',
-        danger: true,
-        onConfirm: () =>
-          done(async () => {
-            await api.deleteOrganization(o.id);
-            if (openOrgId === o.id) setOpenOrgId(null);
-          }),
-      }),
-    deleteContract: (k) =>
-      ask({
-        title: `Delete ${k.title} (${money(k.value)})?`,
-        message: "This can't be undone.",
-        confirmLabel: 'Delete contract',
-        danger: true,
-        onConfirm: () => done(() => api.deleteContract(k.id)),
-      }),
+        : quietly(() => api.archiveOrganization(o.id, false)),
+    archiveContract: (k, archived) =>
+      archived
+        ? ask({
+            title: `Archive ${k.title}?`,
+            message: "It will be hidden from contracts and stats. Nothing is deleted, and you can restore it from Archived.",
+            confirmLabel: 'Archive contract',
+            onConfirm: () => done(() => api.archiveContract(k.id, true)),
+          })
+        : quietly(() => api.archiveContract(k.id, false)),
   };
 
   const editContract = (id) => setForm({ kind: 'contract', id });
@@ -182,6 +201,7 @@ export default function App() {
     onEditContract: editContract,
     onNavigate: navigate,
     onAddNote: addNote,
+    archivedContracts,
   };
   const open = openId && contactsById[openId];
   const openOrgRecord = openOrgId && orgsById[openOrgId];
@@ -191,8 +211,19 @@ export default function App() {
       <DataContext.Provider value={data}>
       <ActionsContext.Provider value={actions}>
         <div className="app">
-          <Sidebar page={page} onNavigate={navigate} counts={counts} theme={theme} onToggleTheme={toggleTheme} />
+          <Sidebar page={page} onNavigate={navigate} counts={counts} theme={theme} onToggleTheme={toggleTheme} dataMode={dataMode} />
           <main className="main">
+            {dataError && (
+              <p className="banner banner-warn" role="alert">
+                <strong>The test database didn't open.</strong> {dataError} You're seeing sample data, and changes won't be saved.
+              </p>
+            )}
+            {loadError && (
+              <p className="banner banner-error" role="alert">
+                <strong>Couldn't load your data.</strong> {loadError}{' '}
+                <button className="link-btn" onClick={load}>Try again</button>
+              </p>
+            )}
             {open ? (
               <ContactProfile
                 contact={open}
@@ -202,6 +233,7 @@ export default function App() {
                 onBack={() => setOpenId(null)}
                 onEdit={() => setForm({ kind: 'contact', id: open.id })}
                 onAddNote={addNote}
+                onUpdateNote={updateNote}
                 onSetStatus={setStatus}
                 onAddContract={addContract}
                 onEditContract={editContract}
@@ -255,7 +287,7 @@ export default function App() {
         {form?.kind === 'contract' && (
           <ContractForm
             key={form.id || 'new-contract'}
-            contract={form.id ? data.contracts.find((k) => k.id === form.id) : null}
+            contract={form.id ? all.contracts.find((k) => k.id === form.id) : null}
             contactId={form.contactId}
             contacts={data.contacts}
             organizations={data.organizations}
@@ -264,6 +296,12 @@ export default function App() {
           />
         )}
         {confirm && <ConfirmDialog {...confirm} onCancel={() => setConfirm(null)} />}
+        {toast && (
+          <div className="toast" role="alert">
+            {toast}
+            <button className="icon-btn" aria-label="Dismiss" onClick={() => setToast('')}>✕</button>
+          </div>
+        )}
       </ActionsContext.Provider>
       </DataContext.Provider>
     </SettingsContext.Provider>

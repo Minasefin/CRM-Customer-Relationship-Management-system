@@ -1,6 +1,6 @@
-# Function contract (draft)
+# Function contract
 
-These are the functions the UI calls. Adrian (database) and Nic (auth) implement them; Mina's UI calls them through `window.crm.api`. **This is a draft. Change it together, in a pull request, before building against it.**
+These are the functions the UI calls. Adrian (database) and Nic (auth) implement them; Mina's UI calls them through `window.crm.api`. **Agreed Oct 29 (Adrian's changes below are approved and the UI uses them). Change it together, in a pull request.**
 
 All functions are async and return plain objects. Dates are ISO strings (`2026-10-26T14:30:00.000Z`).
 
@@ -37,7 +37,8 @@ All functions are async and return plain objects. Dates are ISO strings (`2026-1
 | `moveContact(id, newOrgId)` | `Contact` | Ends the current employment row and starts a new one. `newOrgId` can be `null` (going independent). |
 | `getEmploymentHistory(contactId)` | `Employment[]` | |
 | `getAllEmployment()` | `Employment[]` | Everyone's work history, for the Statistics page and firm pages |
-| `addNote(contactId, text)` | `Note` | Timestamp set by the database |
+| `addNote(contactId, text)` | `Note` | Timestamp set by the database. Empty text is refused. |
+| `updateNote(noteId, text)` | `Note` | Fixes the wording. Keeps the original date; the old text is kept internally. |
 
 **Organization rules:** updateOrganization ignores archived and createdAt. archiveOrganization hides/restores the firm without changing linked contacts or contracts. Organizations and contracts are never deleted.
 
@@ -73,9 +74,9 @@ Employment = { id, contactId, orgId, start, end }          // end: null while cu
 Contract = { id, contactId, orgId, title, location, value, status, start, end, notes, archived } // notes: free text, '' if none; status: 'active' | 'completed'; end on an active contract = expected end date (or null)
 ```
 
-## Database implementation proposal for teammate review
+## Database rules (approved Oct 29, built into the UI)
 
-Approved by Adrian for this branch; UI/auth integration must adopt these changes together:
+The UI follows all of these. Archived contracts are hidden everywhere except the Archived page, a blank contract value shows as "—", and the contractor can't be changed when editing a contract.
 - Remove deleteOrganization and deleteContract; use archiveOrganization and archiveContract(id, archived = true).
 - Contract adds archived: boolean, initially false. Archiving does not complete a contract.
 - Add updateNote(noteId, text) -> Note. Preserve at and retain prior text internally.

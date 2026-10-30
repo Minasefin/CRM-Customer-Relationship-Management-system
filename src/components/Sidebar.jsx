@@ -9,7 +9,7 @@ const main = [
   { id: 'archived', label: 'Archived', icon: 'archived' },
 ];
 
-export default function Sidebar({ page, onNavigate, counts, theme, onToggleTheme }) {
+export default function Sidebar({ page, onNavigate, counts, theme, onToggleTheme, dataMode }) {
   const item = (it) => (
     <button
       key={it.id}
@@ -29,7 +29,9 @@ export default function Sidebar({ page, onNavigate, counts, theme, onToggleTheme
         <div className="brand-mark" aria-hidden="true">C</div>
         <div>
           <div className="brand-name">Contractor CRM</div>
-          <div className="brand-sub">Stored on this computer</div>
+          <div className={'brand-sub' + (dataMode === 'database' ? '' : ' is-sample')}>
+            {dataMode === 'database' ? 'Saved on this computer' : 'Sample data, not saved'}
+          </div>
         </div>
       </div>
       <nav className="nav">{main.map(item)}</nav>

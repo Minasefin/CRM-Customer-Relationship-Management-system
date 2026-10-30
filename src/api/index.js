@@ -1,21 +1,28 @@
 // The UI only ever talks to the data through this file.
-// Right now it returns mock data. When Adrian's database layer is exposed through
-// electron/preload.cjs as window.crm.api, these functions call that instead.
-// Function names and shapes are the contract in docs/API.md.
+// When the app opened Adrian's encrypted database (today: `npm run dev:db`), the preload
+// exposes it as window.crm.api and every call goes there. Otherwise these functions use
+// sample data in memory, with the same names, shapes and rules (docs/API.md).
 import * as mock from './mockData.js';
 
-const real = typeof window !== 'undefined' && window.crm && window.crm.api;
+const crm = typeof window !== 'undefined' ? window.crm : undefined;
+const real = crm && crm.api;
+
+// 'database' = saved in the encrypted database; 'sample' = sample data, resets on restart.
+export const dataMode = real ? 'database' : 'sample';
+// Why the test database didn't open, if `npm run dev:db` was used and something went wrong.
+export const dataError = (crm && crm.dataError) || null;
 
 // Mock changes live in memory only and reset when the app restarts.
 let nextId = 1;
 const newId = (prefix) => `${prefix}-mock-${nextId++}`;
 const copy = (x) => JSON.parse(JSON.stringify(x));
 const now = () => new Date().toISOString();
-const find = (list, id) => {
-  const x = list.find((y) => y.id === id);
-  if (!x) throw new Error(`Not found: ${id}`);
-  return x;
+const fail = (message) => {
+  const err = new Error(message);
+  err.userMessage = message;
+  throw err;
 };
+const find = (list, id) => list.find((y) => y.id === id) || fail('Record not found.');
 
 export const api = real || {
   // Organizations
@@ -38,20 +45,6 @@ export const api = real || {
     const org = find(mock.organizations, id);
     org.archived = archived;
     return copy(org);
-  },
-  // Only for a firm nothing points to (no people ever, no contracts). Otherwise archive it.
-  async deleteOrganization(id) {
-    const used =
-      mock.contacts.some((c) => c.orgId === id) ||
-      mock.employment.some((e) => e.orgId === id) ||
-      mock.contracts.some((k) => k.orgId === id);
-    if (used) {
-      const err = new Error('Organization is in use');
-      err.userMessage = 'This organization has people, history or contracts, so it can only be archived.';
-      throw err;
-    }
-    mock.organizations.splice(mock.organizations.findIndex((o) => o.id === id), 1);
-    return { ok: true };
   },
 
   // Contacts
@@ -96,9 +89,22 @@ export const api = real || {
   },
   async addNote(contactId, text) {
     const contact = find(mock.contacts, contactId);
-    const note = { id: newId('n'), at: now(), text };
+    if (!String(text).trim()) fail('Note cannot be empty.');
+    const note = { id: newId('n'), at: now(), text: String(text).trim() };
     contact.notes.push(note);
     return copy(note);
+  },
+  // Fixes a note's text. Keeps its original date, so a typo fix isn't a new check-in.
+  async updateNote(noteId, text) {
+    if (!String(text).trim()) fail('Note cannot be empty.');
+    for (const c of mock.contacts) {
+      const n = c.notes.find((x) => x.id === noteId);
+      if (n) {
+        n.text = String(text).trim();
+        return copy(n);
+      }
+    }
+    fail('Record not found.');
   },
 
   // Contracts
@@ -106,18 +112,24 @@ export const api = real || {
     return copy(mock.contracts);
   },
   async createContract(data) {
-    const contract = { id: newId('k'), status: 'active', end: null, ...data };
+    const contract = { id: newId('k'), status: 'active', end: null, value: null, notes: '', archived: false, ...data };
     mock.contracts.push(contract);
     return copy(contract);
   },
+  // Who a contract is with (and their firm at the time) can't change after it's created.
   async updateContract(id, data) {
     const contract = find(mock.contracts, id);
-    Object.assign(contract, data, { id });
+    if ((data.contactId !== undefined && data.contactId !== contract.contactId) || (data.orgId !== undefined && data.orgId !== contract.orgId)) {
+      fail('Contract associations cannot be changed.');
+    }
+    const { archived, ...rest } = data;
+    Object.assign(contract, rest, { id });
     return copy(contract);
   },
-  async deleteContract(id) {
-    find(mock.contracts, id);
-    mock.contracts.splice(mock.contracts.findIndex((k) => k.id === id), 1);
-    return { ok: true };
+  // Contracts are never deleted. Archiving hides one; archived=false restores it.
+  async archiveContract(id, archived = true) {
+    const contract = find(mock.contracts, id);
+    contract.archived = archived;
+    return copy(contract);
   },
 };

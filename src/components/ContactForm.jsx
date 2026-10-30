@@ -4,7 +4,7 @@ import ImagePicker from './ImagePicker.jsx';
 import TagInput from './TagInput.jsx';
 import Icon from './Icon.jsx';
 import { OrgFields } from './OrgForm.jsx';
-import { DiscardBar, sameName } from './formBits.jsx';
+import { DiscardBar, sameName, SaveError, errorText } from './formBits.jsx';
 import { soundsLike } from '../lib/soundex.js';
 
 const NEW_ORG = '__new';
@@ -86,6 +86,7 @@ export default function ContactForm({ contact, organizations, contacts, onSave, 
   const [newOrgError, setNewOrgError] = useState('');
   const [step, setStep] = useState('edit'); // 'edit' | 'confirm-move' | 'leaving'
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const isEdit = !!contact;
   const dirty = JSON.stringify(form) !== JSON.stringify(start) || form.orgId === NEW_ORG;
@@ -141,12 +142,21 @@ export default function ContactForm({ contact, organizations, contacts, onSave, 
 
   const commit = async () => {
     setSaving(true);
+    setSaveError('');
     let orgId = form.orgId;
-    if (orgId === NEW_ORG) {
-      const created = await onCreateOrg({ ...newOrg, name: newOrg.name.trim(), city: newOrg.city.trim(), country: newOrg.country.trim() });
-      orgId = created.id;
+    try {
+      if (orgId === NEW_ORG) {
+        const created = await onCreateOrg({ ...newOrg, name: newOrg.name.trim(), city: newOrg.city.trim(), country: newOrg.country.trim() });
+        orgId = created.id;
+        // If the next step fails, a retry uses this firm instead of making it twice.
+        setForm((f) => ({ ...f, orgId }));
+      }
+      await onSave(clean(orgId), { moved: isEdit && (contact.orgId || '') !== orgId });
+    } catch (err) {
+      setSaving(false);
+      setStep('edit');
+      return setSaveError(errorText(err));
     }
-    await onSave(clean(orgId), { moved: isEdit && (contact.orgId || '') !== orgId });
     setSaving(false);
     onClose();
   };
@@ -175,12 +185,15 @@ export default function ContactForm({ contact, organizations, contacts, onSave, 
         </div>
       </div>
     ) : (
-      <div className="btn-row">
-        <button className="btn-primary" onClick={save} disabled={saving}>
-          {isEdit ? 'Save changes' : 'Add contact'}
-        </button>
-        <button className="btn-ghost" onClick={requestClose}>Cancel</button>
-      </div>
+      <>
+        <SaveError message={saveError} />
+        <div className="btn-row">
+          <button className="btn-primary" onClick={save} disabled={saving}>
+            {isEdit ? 'Save changes' : 'Add contact'}
+          </button>
+          <button className="btn-ghost" onClick={requestClose}>Cancel</button>
+        </div>
+      </>
     );
 
   const initials = ((form.firstName[0] || '') + (form.lastName[0] || '')).toUpperCase() || '?';

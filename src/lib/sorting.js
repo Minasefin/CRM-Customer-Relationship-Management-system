@@ -49,16 +49,7 @@ export const contractSorts = [
   { id: 'active', label: 'On contract first', fn: (a, b) => (a.status === b.status ? (time(b.start) ?? 0) - (time(a.start) ?? 0) : a.status === 'active' ? -1 : 1) },
   { id: 'newest', label: 'Newest', fn: desc((k) => time(k.start)) },
   { id: 'oldest', label: 'Oldest', fn: (a, b) => (time(a.start) ?? 0) - (time(b.start) ?? 0) },
-  { id: 'value-high', label: 'Highest value', fn: desc((k) => k.value || 0) },
-  { id: 'value-low', label: 'Lowest value', fn: (a, b) => (a.value || 0) - (b.value || 0) },
+  { id: 'value-high', label: 'Highest value', fn: desc((k) => k.value ?? -1) },
+  { id: 'value-low', label: 'Lowest value', fn: (a, b) => (a.value ?? Infinity) - (b.value ?? Infinity) },
   { id: 'az', label: 'Name A to Z', fn: byText((k) => k.title) },
 ];
-
-// A firm can only be deleted if nothing points to it.
-export function canDeleteOrg(org, { contacts, contracts, employment }) {
-  return (
-    !contacts.some((c) => c.orgId === org.id) &&
-    !employment.some((e) => e.orgId === org.id) &&
-    !contracts.some((k) => k.orgId === org.id)
-  );
-}

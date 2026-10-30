@@ -3,8 +3,9 @@ import Icon from '../components/Icon.jsx';
 import { Avatar } from '../components/ContactCard.jsx';
 import { freshness, formatDate, relativeDays, daysSince } from '../lib/freshness.js';
 import { useSettings } from '../hooks/useSettings.js';
+import { money } from '../lib/money.js';
+import { SaveError, errorText } from '../components/formBits.jsx';
 
-const money = (n) => (n || 0).toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const DAY = 24 * 60 * 60 * 1000;
 
 // "What do I do today?" Who needs a call, contracts to watch, latest notes, and a quick note box.
@@ -13,6 +14,7 @@ export default function HomePage({ contacts, contracts, orgsById, contactsById, 
   const [noteFor, setNoteFor] = useState('');
   const [text, setText] = useState('');
   const [saved, setSaved] = useState('');
+  const [noteError, setNoteError] = useState('');
   const box = useRef(null);
 
   const active = contacts.filter((c) => c.status === 'active');
@@ -49,7 +51,12 @@ export default function HomePage({ contacts, contracts, orgsById, contactsById, 
   const save = async (e) => {
     e.preventDefault();
     if (!noteFor || !text.trim()) return;
-    await onAddNote(noteFor, text.trim());
+    setNoteError('');
+    try {
+      await onAddNote(noteFor, text.trim());
+    } catch (err) {
+      return setNoteError(errorText(err)); // keep what they typed
+    }
     const p = contactsById[noteFor];
     setSaved(`Saved a note for ${p.firstName} ${p.lastName}.`);
     setText('');
@@ -132,6 +139,7 @@ export default function HomePage({ contacts, contracts, orgsById, contactsById, 
                 <span className="muted small">{saved || "Saved with today's date and time."}</span>
                 <button className="btn-primary" disabled={!noteFor || !text.trim()}>Save note</button>
               </div>
+              <SaveError message={noteError} />
             </form>
           </section>
 
@@ -151,7 +159,7 @@ export default function HomePage({ contacts, contracts, orgsById, contactsById, 
                       <button className="contract-item" onClick={() => onEditContract(k.id)}>
                         <div className="contract-title">{k.title}</div>
                         <div className="muted small">
-                          {p ? `${p.firstName} ${p.lastName}, ` : ''}{[k.location, money(k.value)].filter(Boolean).join(', ')}
+                          {p ? `${p.firstName} ${p.lastName}, ` : ''}{[k.location, k.value != null && money(k.value)].filter(Boolean).join(', ')}
                         </div>
                         {daysLeft !== null && daysLeft <= 30 ? (
                           <span className="status-pill status-ending">{daysLeft <= 0 ? 'Ends today' : `Ends in ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'}`}</span>

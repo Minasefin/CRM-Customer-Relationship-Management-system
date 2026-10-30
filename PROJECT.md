@@ -25,10 +25,10 @@ Update this section whenever something lands, so everyone (and their AI tools) k
 
 | Area | Status | Next step |
 | --- | --- | --- |
-| UI (Mina) | App shell, sidebar, contact grid, settings, auto light/dark, contact profile (notes, call/text, status, work history), add/edit forms for contacts, orgs and contracts, firm pages, On contract/Available labels, Statistics page, Home page, ⋯ menus with archive/delete, sort dropdowns done with mock data | Login and first-time setup screens, then swap mock data for real functions |
-| Database (Adrian) | Draft schema in `database/schema.sql`; nothing built yet | Review `docs/API.md`, set up encrypted SQLite, implement Organizations/Contacts/Contracts functions |
+| UI (Mina) | All screens done and connected to the database: contacts, profile (notes with edit, call/text, status, work history), firms, contracts with notes, Home, Statistics, Archived (people, firms, contracts), settings, sounds-like search. Save errors show in plain English. | Login and first-time setup screens once Nic's functions exist |
+| Database (Adrian) | Encrypted SQLite built (`database/`), with tests. Connected to the app; `npm run dev:db` runs it with a test key. | Help wire the login's key into `openDatabase` |
 | Auth (Nic) | Notes in `auth/README.md`; nothing built yet | Review `docs/API.md`, agree on key hand-off with Adrian, implement Auth functions |
-| Shared | `docs/API.md` is a draft | All three agree on it, then build against it |
+| Shared | `docs/API.md` agreed Oct 29. Every pull request runs the app on a real encrypted database and clicks through it. | Installers must include the database module |
 
 ## What the app stores
 
@@ -86,7 +86,7 @@ Must = Sprint 1 (Oct 31). Should = the revision week. Could = only if time allow
 
 ## How the layers connect
 
-The UI never touches the database or auth code directly. It calls the functions in [`docs/API.md`](docs/API.md) through `window.crm.api`, which `electron/preload.cjs` exposes. Until those exist, the UI uses mock data.
+The UI never touches the database or auth code directly. It calls the functions in [`docs/API.md`](docs/API.md) through `window.crm.api`, which `electron/preload.cjs` exposes once the main process has opened the database (`electron/database-bridge.cjs`). Without a database the UI uses sample data with the same shapes.
 
 ```
 UI (src/)  →  window.crm.api  →  electron/main.cjs  →  database/ and auth/

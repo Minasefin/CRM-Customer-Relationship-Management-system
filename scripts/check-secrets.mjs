@@ -17,7 +17,7 @@ const patterns = [
   ['Password in a URL', /[a-z]+:\/\/[^\s:/@'"]+:[^\s@'"]{3,}@/i],
   ['Hard-coded secret', /\b(api[_-]?key|secret|access[_-]?token|auth[_-]?token|password|passwd)\b\s*[:=]\s*['"][^'"\s]{8,}['"]/i],
 ];
-const badFiles = [/(^|\/)\.env(\.|$)/, /\.(db|sqlite|sqlite3|db-journal|pem|key|p12|pfx)$/i, /(^|\/)id_(rsa|ed25519)$/];
+const badFiles = [/(^|\/)\.dev-key$/, /(^|\/)\.env(\.|$)/, /\.(db|sqlite|sqlite3|db-journal|pem|key|p12|pfx)$/i, /(^|\/)id_(rsa|ed25519)$/];
 const skip = [/^package-lock\.json$/, /^scripts\/check-secrets\.mjs$/, /\.(png|jpe?g|gif|ico|woff2?|ttf)$/i];
 
 const staged = process.argv.includes('--staged');

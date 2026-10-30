@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Drawer from './Drawer.jsx';
-import { DiscardBar } from './formBits.jsx';
+import { DiscardBar, SaveError, errorText } from './formBits.jsx';
 
 const toDateInput = (iso) => (iso ? iso.slice(0, 10) : '');
 const fromDateInput = (d) => (d ? new Date(`${d}T12:00:00`).toISOString() : null);
@@ -20,6 +20,7 @@ export default function ContractForm({ contract, contactId, contacts, organizati
   const [errors, setErrors] = useState({});
   const [leaving, setLeaving] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const dirty = JSON.stringify(form) !== JSON.stringify(start);
 
   const set = (k) => (e) => {
@@ -43,18 +44,24 @@ export default function ContractForm({ contract, contactId, contacts, organizati
     if (Object.keys(e).length) return;
 
     setSaving(true);
+    setSaveError('');
     const person = contacts.find((c) => c.id === form.contactId);
-    await onSave({
-      contactId: form.contactId,
-      orgId: contract?.orgId ?? person?.orgId ?? null,
-      title: form.title.trim(),
-      location: form.location.trim(),
-      value: value ? Math.round(Number(value)) : 0,
-      status: form.status,
-      start: fromDateInput(form.start),
-      end: form.status === 'completed' ? fromDateInput(form.end) || new Date().toISOString() : fromDateInput(form.end),
-      notes: form.notes.trim(),
-    });
+    try {
+      await onSave({
+        contactId: form.contactId,
+        orgId: contract?.orgId ?? person?.orgId ?? null,
+        title: form.title.trim(),
+        location: form.location.trim(),
+        value: value ? Math.round(Number(value)) : null, // blank = not known yet
+        status: form.status,
+        start: fromDateInput(form.start),
+        end: form.status === 'completed' ? fromDateInput(form.end) || new Date().toISOString() : fromDateInput(form.end),
+        notes: form.notes.trim(),
+      });
+    } catch (err) {
+      setSaving(false);
+      return setSaveError(errorText(err));
+    }
     setSaving(false);
     onClose();
   };
@@ -69,17 +76,20 @@ export default function ContractForm({ contract, contactId, contacts, organizati
         leaving ? (
           <DiscardBar onDiscard={onClose} onKeep={() => setLeaving(false)} />
         ) : (
-          <div className="btn-row">
-            <button className="btn-primary" onClick={save} disabled={saving}>{contract ? 'Save changes' : 'Add contract'}</button>
-            <button className="btn-ghost" onClick={requestClose}>Cancel</button>
-          </div>
+          <>
+            <SaveError message={saveError} />
+            <div className="btn-row">
+              <button className="btn-primary" onClick={save} disabled={saving}>{contract ? 'Save changes' : 'Add contract'}</button>
+              <button className="btn-ghost" onClick={requestClose}>Cancel</button>
+            </div>
+          </>
         )
       }
     >
       <div className="form-grid form-section">
         <label className="field span-2">
           <span>Contractor <em>required</em></span>
-          <select value={form.contactId} onChange={set('contactId')} aria-invalid={!!errors.contactId}>
+          <select value={form.contactId} onChange={set('contactId')} aria-invalid={!!errors.contactId} disabled={!!contract}>
             <option value="">Choose a person…</option>
             {people.map((c) => (
               <option key={c.id} value={c.id}>
@@ -88,6 +98,7 @@ export default function ContractForm({ contract, contactId, contacts, organizati
             ))}
           </select>
           {errors.contactId && <small className="field-error">{errors.contactId}</small>}
+          {contract && <small className="field-hint">A contract stays with the person and firm it was made with. To change who it's with, archive it and add a new one.</small>}
         </label>
         <label className="field span-2">
           <span>Contract name <em>required</em></span>

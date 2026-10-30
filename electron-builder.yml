@@ -10,7 +10,12 @@ directories:
 files:
   - dist/**/*
   - electron/**/*
+  - database/index.cjs
+  - database/schema.sql
   - package.json
+# The encrypted database is a compiled module; it can't run from inside the app archive.
+asarUnpack:
+  - node_modules/better-sqlite3-multiple-ciphers/**/*
 asar: true
 
 # Security switches baked into the app (see SECURITY.md):

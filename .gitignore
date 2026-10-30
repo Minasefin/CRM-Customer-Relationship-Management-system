@@ -13,5 +13,8 @@ Thumbs.db
 .env
 .env.*
 
-# Built installers
+# Test-only database key from `npm run dev:db`. Never commit.
+.dev-key
+
+# Installer builds (npm run dist). Never commit.
 release/

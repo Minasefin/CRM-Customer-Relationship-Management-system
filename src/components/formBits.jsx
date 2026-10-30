@@ -11,6 +11,15 @@ export const orgInitials = (name = '') =>
     .join('')
     .toUpperCase();
 
+// The plain-English reason a save failed. The database puts a safe message on e.userMessage.
+export const errorText = (e) => (e && (e.userMessage || e.message)) || "Couldn't save. Try again.";
+
+// Shown above a form's buttons when a save fails. The form stays open so nothing typed is lost.
+export function SaveError({ message }) {
+  if (!message) return null;
+  return <p className="save-error" role="alert">{message}</p>;
+}
+
 // Shown in a form's footer when someone closes it with unsaved changes.
 // Main action first, then the way out, same as every confirm in the app.
 export function DiscardBar({ onDiscard, onKeep }) {

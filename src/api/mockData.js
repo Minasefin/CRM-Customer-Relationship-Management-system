@@ -9,7 +9,7 @@ export const organizations = [
   { id: 'org-2', name: 'Northwind Tactical', country: 'United Kingdom', city: 'Hereford', logo: null, archived: false, createdAt: daysAgo(1100) },
   { id: 'org-3', name: 'Summit Ridge Logistics', country: 'Kenya', city: 'Nairobi', logo: null, archived: false, createdAt: daysAgo(200) },
   { id: 'org-4', name: 'Granite Point Defense', country: 'United Arab Emirates', city: 'Abu Dhabi', logo: null, archived: false, createdAt: daysAgo(950) },
-  { id: 'org-5', name: 'Harbor Line Services', country: 'Djibouti', city: 'Djibouti', logo: null, archived: false, createdAt: daysAgo(2) }, // no people yet: can be deleted
+  { id: 'org-5', name: 'Harbor Line Services', country: 'Djibouti', city: 'Djibouti', logo: null, archived: false, createdAt: daysAgo(2) }, // no people yet
 ];
 
 const c = (id, firstName, lastName, orgId, title, skills, status, createdDaysAgo, noteDays, extra = {}) => ({
@@ -53,10 +53,10 @@ export const contacts = [
 ];
 
 export const contracts = [
-  { id: 'k-1', contactId: 'c-101', orgId: 'org-1', title: 'Site security detail', location: 'Erbil, Iraq', value: 185000, status: 'active', start: daysAgo(60), end: daysAgo(-18) },
-  { id: 'k-2', contactId: 'c-104', orgId: 'org-3', title: 'Convoy logistics', location: 'Nairobi, Kenya', value: 92000, status: 'active', start: daysAgo(20), end: null },
-  { id: 'k-3', contactId: 'c-103', orgId: 'org-2', title: 'Aviation support', location: 'Djibouti', value: 240000, status: 'completed', start: daysAgo(400), end: daysAgo(150) },
-  { id: 'k-4', contactId: 'c-105', orgId: 'org-4', title: 'Facility risk review', location: 'Abu Dhabi, UAE', value: 48000, status: 'completed', start: daysAgo(300), end: daysAgo(240) },
+  { id: 'k-1', contactId: 'c-101', orgId: 'org-1', title: 'Site security detail', location: 'Erbil, Iraq', value: 185000, status: 'active', archived: false, start: daysAgo(60), end: daysAgo(-18), notes: 'Paid monthly. Site lead is Capt. R. Ames. Marcus wants to extend through spring.' },
+  { id: 'k-2', contactId: 'c-104', orgId: 'org-3', title: 'Convoy logistics', location: 'Nairobi, Kenya', value: 92000, status: 'active', start: daysAgo(20), end: null, archived: false, notes: '' },
+  { id: 'k-3', contactId: 'c-103', orgId: 'org-2', title: 'Aviation support', location: 'Djibouti', value: 240000, status: 'completed', start: daysAgo(400), end: daysAgo(150), archived: false, notes: '' },
+  { id: 'k-4', contactId: 'c-105', orgId: 'org-4', title: 'Facility risk review', location: 'Abu Dhabi, UAE', value: 48000, status: 'completed', start: daysAgo(300), end: daysAgo(240), archived: false, notes: '' },
 ];
 
 // One row per stint at an organization. end: null = current.

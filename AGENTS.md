@@ -45,6 +45,8 @@ Three people each own one layer. Before writing code, confirm which one you're h
 npm install
 npm run dev       # desktop app
 npm run dev:web   # UI only in the browser
+npm run dev:db    # desktop app on an encrypted TEST database (creates .dev-key; never commit it)
+npm run test:db   # database tests
 npm run build     # check it compiles
 npm run check:secrets   # scan for keys/passwords before committing
 ```

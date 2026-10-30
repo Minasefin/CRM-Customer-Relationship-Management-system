@@ -4,18 +4,29 @@ import MoreMenu from '../components/MoreMenu.jsx';
 import SortSelect, { useSort } from '../components/SortSelect.jsx';
 import { orgInitials } from '../components/formBits.jsx';
 import { formatDate } from '../lib/freshness.js';
-import { orgSorts, contractSorts, canDeleteOrg } from '../lib/sorting.js';
+import { orgSorts, contractSorts } from '../lib/sorting.js';
 import { useActions } from '../lib/dataContext.js';
+import { money } from '../lib/money.js';
 
-const money = (n) => (n || 0).toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
-// Same ⋯ menu for a firm wherever it shows up.
-export function orgMenu(org, data, actions) {
-  const items = [{ label: 'Edit', onSelect: () => actions.editOrg(org.id) }];
-  if (org.archived) items.push({ label: 'Restore', onSelect: () => actions.archiveOrg(org, false) });
-  else items.push({ label: 'Archive', onSelect: () => actions.archiveOrg(org, true) });
-  if (canDeleteOrg(org, data)) items.push({ label: 'Delete', danger: true, onSelect: () => actions.deleteOrg(org) });
-  return items;
+// Same ⋯ menu for a firm wherever it shows up. Nothing is ever deleted: archive hides, restore brings back.
+export function orgMenu(org, _data, actions) {
+  return [
+    { label: 'Edit', onSelect: () => actions.editOrg(org.id) },
+    org.archived
+      ? { label: 'Restore', onSelect: () => actions.archiveOrg(org, false) }
+      : { label: 'Archive', onSelect: () => actions.archiveOrg(org, true) },
+  ];
+}
+
+// Same ⋯ menu for a contract wherever it shows up.
+export function contractMenu(k, actions, onEditContract) {
+  return k.archived
+    ? [{ label: 'Restore', onSelect: () => actions.archiveContract(k, false) }]
+    : [
+        { label: 'Edit', onSelect: () => onEditContract(k.id) },
+        { label: 'Archive', onSelect: () => actions.archiveContract(k, true) },
+      ];
 }
 
 function OrgCard({ org, data, onOpenOrg }) {
@@ -125,7 +136,11 @@ export function ContractsPage({ contracts, contactsById, orgsById, onAddContract
                     onClick={() => onEditContract(k.id)}
                     onKeyDown={(e) => e.key === 'Enter' && onEditContract(k.id)}
                   >
-                    <td>{k.title}<div className="muted small">{k.orgId ? orgsById[k.orgId]?.name : 'Independent'}</div></td>
+                    <td>
+                      {k.title}
+                      <div className="muted small">{k.orgId ? orgsById[k.orgId]?.name : 'Independent'}</div>
+                      {k.notes && <div className="contract-notes clamp">{k.notes}</div>}
+                    </td>
                     <td>{p ? `${p.firstName} ${p.lastName}` : '—'}</td>
                     <td>{k.location}</td>
                     <td className="num">{money(k.value)}</td>
@@ -134,10 +149,7 @@ export function ContractsPage({ contracts, contactsById, orgsById, onAddContract
                     <td className="cell-menu">
                       <MoreMenu
                         label={`Actions for ${k.title}`}
-                        items={[
-                          { label: 'Edit', onSelect: () => onEditContract(k.id) },
-                          { label: 'Delete', danger: true, onSelect: () => actions.deleteContract(k) },
-                        ]}
+                        items={contractMenu(k, actions, onEditContract)}
                       />
                     </td>
                   </tr>
@@ -151,7 +163,8 @@ export function ContractsPage({ contracts, contactsById, orgsById, onAddContract
   );
 }
 
-export function ArchivedPage({ contacts, organizations, contracts, employment, orgsById, onOpen, onOpenOrg }) {
+export function ArchivedPage({ contacts, organizations, contracts, employment, archivedContracts = [], contactsById, orgsById, onOpen, onOpenOrg }) {
+  const actions = useActions();
   const archived = contacts.filter((c) => c.status !== 'active');
   const archivedOrgs = organizations.filter((o) => o.archived);
   const data = { contacts, contracts, employment };
@@ -160,7 +173,7 @@ export function ArchivedPage({ contacts, organizations, contracts, employment, o
       <header className="page-head">
         <div>
           <h1>Archived</h1>
-          <p className="page-sub">People who left or have died, and organizations you archived. Their history is kept.</p>
+          <p className="page-sub">People who left or have died, and organizations and contracts you archived. Nothing here is deleted.</p>
         </div>
       </header>
 
@@ -182,6 +195,43 @@ export function ArchivedPage({ contacts, organizations, contracts, employment, o
         ) : (
           <div className="grid grid-wide">
             {archivedOrgs.map((o) => <OrgCard key={o.id} org={o} data={data} onOpenOrg={onOpenOrg} />)}
+          </div>
+        )}
+      </section>
+
+      <section className="org-section">
+        <h2>Contracts</h2>
+        {archivedContracts.length === 0 ? (
+          <p className="muted">No archived contracts. Use Archive in a contract's ⋯ menu to hide it.</p>
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Contract</th>
+                  <th>Contractor</th>
+                  <th className="num">Value</th>
+                  <th>Status</th>
+                  <th><span className="sr-only">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {archivedContracts.map((k) => {
+                  const p = contactsById[k.contactId];
+                  return (
+                    <tr key={k.id}>
+                      <td>{k.title}<div className="muted small">{k.orgId ? orgsById[k.orgId]?.name : 'Independent'}</div></td>
+                      <td>{p ? `${p.firstName} ${p.lastName}` : '—'}</td>
+                      <td className="num">{money(k.value)}</td>
+                      <td><span className={`status-pill status-${k.status}`}>{k.status === 'active' ? 'On contract' : 'Completed'}</span></td>
+                      <td className="cell-menu">
+                        <MoreMenu label={`Actions for ${k.title}`} items={contractMenu(k, actions)} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </section>

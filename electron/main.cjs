@@ -4,8 +4,11 @@
 const { app, BrowserWindow, shell, session } = require('electron');
 const path = require('path');
 const { isAppUrl, DEV_URL } = require('./ipc.cjs');
+const { setupDatabaseBridge } = require('./database-bridge.cjs');
 
 app.setName('Contractor CRM');
+// Automated tests run with their own throwaway data folder. Ignored in the installed app.
+if (!app.isPackaged && process.env.CRM_USER_DATA) app.setPath('userData', process.env.CRM_USER_DATA);
 app.enableSandbox(); // every renderer runs in Chromium's sandbox, no Node.js access
 
 // Links that are allowed to leave the app, opened by the system (phone, messages, mail).
@@ -61,7 +64,23 @@ app.on('web-contents-created', (_event, contents) => {
   contents.on('will-attach-webview', (event) => event.preventDefault());
 });
 
-app.whenReady().then(() => {
+// Only one copy of the app can run. Opening it again just brings the existing window forward,
+// so there's never a second window popping up after you quit the first.
+const isFirstCopy = app.requestSingleInstanceLock();
+if (!isFirstCopy) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (!win) return createWindow();
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
+  });
+}
+
+app.whenReady().then(async () => {
+  if (!isFirstCopy) return; // a copy is already open; it was just brought to the front
   // The app needs no camera, microphone, location, notifications, etc. Deny every request.
   session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
   session.defaultSession.setPermissionCheckHandler(() => false);
@@ -71,12 +90,12 @@ app.whenReady().then(() => {
     callback({ cancel: !isAppUrl(details.url) && !details.url.startsWith('devtools://') });
   });
 
+  await setupDatabaseBridge(); // opens the development database if `npm run dev:db` supplied a key
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
+// One-window app: closing the window (red ✕ on Mac) quits it on every system.
+app.on('window-all-closed', () => app.quit());

@@ -4,19 +4,85 @@ import Icon from '../components/Icon.jsx';
 import { freshness, formatDate, relativeDays } from '../lib/freshness.js';
 import { useSettings } from '../hooks/useSettings.js';
 import { api } from '../api/index.js';
-
-const money = (n) => n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+import { money } from '../lib/money.js';
+import { SaveError, errorText } from '../components/formBits.jsx';
 
 const formatDateTime = (iso) =>
   new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
+// One note in the timeline. Edit fixes the wording only; the date it was written stays the same.
+function NoteItem({ note, onUpdate }) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(note.text);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const cancel = () => {
+    setText(note.text);
+    setError('');
+    setEditing(false);
+  };
+  const save = async () => {
+    if (!text.trim()) return setError("A note can't be empty.");
+    if (text.trim() === note.text) return cancel();
+    setSaving(true);
+    try {
+      await onUpdate(note.id, text.trim());
+      setEditing(false);
+      setError('');
+    } catch (e) {
+      setError(errorText(e));
+    }
+    setSaving(false);
+  };
+
+  return (
+    <li>
+      <div className="note-head">
+        <time dateTime={note.at}>{formatDateTime(note.at)}</time>
+        {!editing && (
+          <button className="link-btn note-edit" onClick={() => setEditing(true)} aria-label={`Edit note from ${formatDateTime(note.at)}`}>
+            Edit
+          </button>
+        )}
+      </div>
+      {editing ? (
+        <div className="note-form note-edit-form">
+          <textarea
+            value={text}
+            rows={3}
+            autoFocus
+            onChange={(e) => {
+              setText(e.target.value);
+              setError('');
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save();
+              if (e.key === 'Escape') cancel();
+            }}
+          />
+          <SaveError message={error} />
+          <div className="btn-row">
+            <button className="btn-primary" onClick={save} disabled={saving}>Save</button>
+            <button className="btn-ghost" onClick={cancel}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <p>{note.text}</p>
+      )}
+    </li>
+  );
+}
+
 const statusLabel = { active: 'Active', inactive: 'Left / inactive', deceased: 'Deceased' };
 const socialLabel = { x: 'X', instagram: 'Instagram', snapchat: 'Snapchat', facebook: 'Facebook' };
 
-export default function ContactProfile({ contact, org, orgsById, contracts, onBack, onEdit, onAddNote, onSetStatus, onAddContract, onEditContract, onOpenOrg }) {
+export default function ContactProfile({ contact, org, orgsById, contracts, onBack, onEdit, onAddNote, onUpdateNote, onSetStatus, onAddContract, onEditContract, onOpenOrg }) {
   const [settings] = useSettings();
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
+  const [noteError, setNoteError] = useState('');
+  const [statusError, setStatusError] = useState('');
   const [confirm, setConfirm] = useState(null); // status waiting for confirmation
   const [history, setHistory] = useState([]);
 
@@ -39,14 +105,24 @@ export default function ContactProfile({ contact, org, orgsById, contracts, onBa
     e.preventDefault();
     if (!draft.trim()) return;
     setSaving(true);
-    await onAddNote(contact.id, draft.trim());
-    setDraft('');
+    setNoteError('');
+    try {
+      await onAddNote(contact.id, draft.trim());
+      setDraft('');
+    } catch (err) {
+      setNoteError(errorText(err)); // keep what they typed
+    }
     setSaving(false);
   };
 
   const changeStatus = async (status) => {
-    await onSetStatus(contact.id, status);
-    setConfirm(null);
+    setStatusError('');
+    try {
+      await onSetStatus(contact.id, status);
+      setConfirm(null);
+    } catch (err) {
+      setStatusError(errorText(err));
+    }
   };
 
   return (
@@ -104,6 +180,7 @@ export default function ContactProfile({ contact, org, orgsById, contracts, onBa
               onChange={(e) => setDraft(e.target.value)}
               placeholder={`What did you and ${contact.firstName} talk about?`}
               rows={3}
+              aria-label={`New note about ${contact.firstName}`}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) saveNote(e);
               }}
@@ -112,6 +189,7 @@ export default function ContactProfile({ contact, org, orgsById, contracts, onBa
               <span className="muted small">Saved with today's date and time. Cmd + Enter to save.</span>
               <button className="btn-primary" disabled={!draft.trim() || saving}>Save note</button>
             </div>
+            <SaveError message={noteError} />
           </form>
 
           {notes.length === 0 ? (
@@ -119,10 +197,7 @@ export default function ContactProfile({ contact, org, orgsById, contracts, onBa
           ) : (
             <ol className="timeline">
               {notes.map((n) => (
-                <li key={n.id}>
-                  <time dateTime={n.at}>{formatDateTime(n.at)}</time>
-                  <p>{n.text}</p>
-                </li>
+                <NoteItem key={`${n.id}:${n.text}`} note={n} onUpdate={onUpdateNote} />
               ))}
             </ol>
           )}
@@ -220,8 +295,9 @@ export default function ContactProfile({ contact, org, orgsById, contracts, onBa
                   <li key={k.id}>
                     <button className="contract-item" onClick={() => onEditContract(k.id)} aria-label={`Edit ${k.title}`}>
                       <div className="contract-title">{k.title}</div>
-                      <div className="muted small">{[k.location, money(k.value)].filter(Boolean).join(', ')}</div>
+                      <div className="muted small">{[k.location, k.value != null && money(k.value)].filter(Boolean).join(', ')}</div>
                       <span className={`status-pill status-${k.status}`}>{k.status === 'active' ? 'On contract' : 'Completed'}</span>
+                      {k.notes && <p className="contract-notes">{k.notes}</p>}
                     </button>
                   </li>
                 ))}
@@ -260,6 +336,7 @@ export default function ContactProfile({ contact, org, orgsById, contracts, onBa
                   <button className="btn-primary" onClick={() => changeStatus(confirm)}>Yes, mark {statusLabel[confirm].toLowerCase()}</button>
                   <button className="btn-ghost" onClick={() => setConfirm(null)}>Cancel</button>
                 </div>
+                <SaveError message={statusError} />
               </div>
             ) : (
               <div className="btn-row status-actions">

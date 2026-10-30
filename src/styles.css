@@ -574,3 +574,44 @@ select, .days-input input {
 @media (max-width: 1100px) {
   .home-grid { grid-template-columns: 1fr; }
 }
+
+/* Contract notes */
+.contract-notes { margin: 8px 0 0; font-size: 13px; line-height: 1.45; color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+.contract-notes.clamp { max-width: 340px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
+.status-pill { white-space: nowrap; }
+
+/* Soundex "sounds like" results */
+.sounds-like { margin-top: 32px; padding-top: 24px; border-top: 1px dashed var(--line); }
+.sounds-like h2 { margin: 0; font-size: 17px; letter-spacing: -0.01em; }
+.sounds-like > p { margin: 4px 0 16px; }
+.sounds-like.is-only { margin-top: 4px; padding-top: 0; border-top: 0; }
+
+/* Database: save errors, banners, toast, sample-data hint, note editing */
+.save-error {
+  margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; font-size: 14px; font-weight: 500;
+  color: var(--overdue); background: color-mix(in srgb, var(--overdue) 10%, transparent);
+}
+.note-form .save-error { margin: 10px 0 0; }
+.field-hint { color: var(--muted); font-size: 13px; }
+select:disabled { opacity: 0.7; cursor: not-allowed; }
+
+.banner { margin: 0 0 20px; padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.45; }
+.banner-warn { background: color-mix(in srgb, var(--stale) 16%, transparent); color: var(--ink); }
+.banner-error { background: color-mix(in srgb, var(--overdue) 12%, transparent); color: var(--ink); }
+.banner .link-btn { font-weight: 600; }
+
+.toast {
+  position: fixed; right: 24px; bottom: 24px; z-index: 60; max-width: 420px;
+  display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 16px; border-radius: 12px;
+  background: var(--ink); color: var(--bg); font-size: 14px; box-shadow: 0 10px 30px rgb(0 0 0 / 0.25);
+}
+.toast .icon-btn { color: inherit; flex: none; }
+
+.brand-sub.is-sample { color: var(--stale); font-weight: 600; }
+
+.note-head { display: flex; align-items: baseline; gap: 10px; }
+.note-edit { font-size: 13px; opacity: 0; transition: opacity 0.12s; }
+.timeline li:hover .note-edit, .note-edit:focus-visible { opacity: 1; }
+.note-edit-form { margin-top: 6px; }
+.note-edit-form .btn-row { margin-top: 10px; }
+@media (hover: none) { .note-edit { opacity: 1; } }

@@ -33,6 +33,16 @@ Checked against the real Electron app on Oct 26, 2026:
 3. **Treat everything from the page as untrusted.** Check types and lengths, and use parameterized SQL (`db.prepare('... WHERE id = ?').get(id)`), never string-building.
 4. **Never log passwords, keys, or contact data** to the console or a file.
 
+## Test database key (`npm run dev:db`)
+
+Until the login exists, developers open the database with a random test key:
+
+- `.dev-key` is created on your computer, gitignored, and blocked by `npm run check:secrets`. Never commit or share it.
+- The key reaches the app only through the `CRM_DEV_KEY` environment variable, and **the installed (packaged) app ignores it**, so it can't become a way around the login.
+- The test database is separate from the real one (`userData/dev/crm-dev.db`) and only ever holds made-up sample data.
+- The page never sees the key. Only the 19 data functions in `docs/API.md` are exposed; `openDatabase`, `closeDatabase` and `rekeyDatabase` stay in the main process.
+- The "App test (database)" check on every pull request opens the real app on an encrypted database with a throwaway key and clicks through it.
+
 ## Login and encryption (Nic, with Adrian)
 
 - The password is never stored. Derive the database key from it with `crypto.scrypt` and a random 16-byte salt. Store only the salt and a separate check value.

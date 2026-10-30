@@ -29,3 +29,5 @@ jobs:
         run: npm audit --audit-level=high
       - name: App builds
         run: npm run build
+      - name: Database tests
+        run: node --test database/database.test.cjs

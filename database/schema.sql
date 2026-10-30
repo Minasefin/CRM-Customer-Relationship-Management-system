@@ -1,76 +1,21 @@
--- Draft schema. Matches src/api/mockData.js and docs/API.md.
--- Nothing is deleted: contacts are archived through `status`.
-
-CREATE TABLE organizations (
-  id         TEXT PRIMARY KEY,
-  name       TEXT NOT NULL,
-  city       TEXT,
-  country    TEXT,
-  logo       BLOB,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE TABLE contacts (
-  id         TEXT PRIMARY KEY,
-  org_id     TEXT REFERENCES organizations(id),   -- current organization
-  first_name TEXT NOT NULL,
-  last_name  TEXT NOT NULL,
-  title      TEXT,
-  status     TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'deceased')),
-  phone      TEXT,
-  email      TEXT,
-  address    TEXT,
-  spouse     TEXT,
-  photo      BLOB,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE TABLE children (
-  id         TEXT PRIMARY KEY,
-  contact_id TEXT NOT NULL REFERENCES contacts(id),
-  name       TEXT NOT NULL
-);
-
-CREATE TABLE skills (
-  contact_id TEXT NOT NULL REFERENCES contacts(id),
-  skill      TEXT NOT NULL,
-  PRIMARY KEY (contact_id, skill)
-);
-
-CREATE TABLE social_accounts (
-  contact_id TEXT NOT NULL REFERENCES contacts(id),
-  platform   TEXT NOT NULL,   -- 'x', 'instagram', 'snapchat', 'facebook'
-  handle     TEXT NOT NULL,
-  PRIMARY KEY (contact_id, platform)
-);
-
-CREATE TABLE notes (
-  id         TEXT PRIMARY KEY,
-  contact_id TEXT NOT NULL REFERENCES contacts(id),
-  at         TEXT NOT NULL DEFAULT (datetime('now')),
-  text       TEXT NOT NULL
-);
-
--- One row per stint at an organization; end_date NULL = current job.
-CREATE TABLE employment_history (
-  id         TEXT PRIMARY KEY,
-  contact_id TEXT NOT NULL REFERENCES contacts(id),
-  org_id     TEXT NOT NULL REFERENCES organizations(id),
-  start_date TEXT NOT NULL,
-  end_date   TEXT
-);
-
-CREATE TABLE contracts (
-  id         TEXT PRIMARY KEY,
-  contact_id TEXT REFERENCES contacts(id),
-  org_id     TEXT REFERENCES organizations(id),
-  title      TEXT NOT NULL,
-  location   TEXT,
-  value      INTEGER,          -- whole US dollars
-  status     TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed')),
-  start_date TEXT,
-  end_date   TEXT
-);
-
-CREATE INDEX idx_notes_contact_at ON notes (contact_id, at);
-CREATE INDEX idx_skills_skill ON skills (skill);
+-- Version 1; applied atomically to an empty encrypted database.
+CREATE TABLE organizations (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL CHECK(length(trim(name))>0), city TEXT NOT NULL, country TEXT NOT NULL, logo TEXT, archived INTEGER NOT NULL CHECK(archived IN (0,1)), created_at TEXT NOT NULL) STRICT;
+CREATE TABLE contacts (id TEXT PRIMARY KEY NOT NULL, org_id TEXT REFERENCES organizations(id), first_name TEXT NOT NULL, last_name TEXT NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('active','inactive','deceased')), address TEXT NOT NULL, spouse TEXT NOT NULL, photo TEXT, created_at TEXT NOT NULL, CHECK(length(trim(first_name))>0 OR length(trim(last_name))>0)) STRICT;
+CREATE TABLE contact_phones (contact_id TEXT NOT NULL REFERENCES contacts(id), position INTEGER NOT NULL, label TEXT NOT NULL CHECK(label IN ('Mobile','Work','Home','Other')), number TEXT NOT NULL, PRIMARY KEY(contact_id,position)) STRICT;
+CREATE TABLE contact_emails (contact_id TEXT NOT NULL REFERENCES contacts(id), position INTEGER NOT NULL, label TEXT NOT NULL CHECK(label IN ('Personal','Work','Other')), address TEXT NOT NULL, PRIMARY KEY(contact_id,position)) STRICT;
+CREATE TABLE children (contact_id TEXT NOT NULL REFERENCES contacts(id), position INTEGER NOT NULL, name TEXT NOT NULL, PRIMARY KEY(contact_id,position)) STRICT;
+CREATE TABLE skills (contact_id TEXT NOT NULL REFERENCES contacts(id), position INTEGER NOT NULL, skill TEXT NOT NULL COLLATE NOCASE, PRIMARY KEY(contact_id,skill)) STRICT;
+CREATE TABLE social_accounts (contact_id TEXT NOT NULL REFERENCES contacts(id), platform TEXT NOT NULL CHECK(platform IN ('x','instagram','snapchat','facebook')), handle TEXT NOT NULL, PRIMARY KEY(contact_id,platform)) STRICT;
+CREATE TABLE notes (id TEXT PRIMARY KEY NOT NULL, contact_id TEXT NOT NULL REFERENCES contacts(id), at TEXT NOT NULL, text TEXT NOT NULL) STRICT;
+CREATE TABLE note_revisions (id TEXT PRIMARY KEY NOT NULL, note_id TEXT NOT NULL REFERENCES notes(id), text TEXT NOT NULL, corrected_at TEXT NOT NULL) STRICT;
+CREATE TABLE employment_history (id TEXT PRIMARY KEY NOT NULL, contact_id TEXT NOT NULL REFERENCES contacts(id), org_id TEXT NOT NULL REFERENCES organizations(id), start_date TEXT NOT NULL, end_date TEXT, CHECK(end_date IS NULL OR end_date>=start_date)) STRICT;
+CREATE TABLE contracts (id TEXT PRIMARY KEY NOT NULL, contact_id TEXT NOT NULL REFERENCES contacts(id), org_id TEXT REFERENCES organizations(id), title TEXT NOT NULL CHECK(length(trim(title))>0), location TEXT NOT NULL, value INTEGER CHECK(value IS NULL OR (value>=0 AND value<=9007199254740991)), status TEXT NOT NULL CHECK(status IN ('active','completed')), start_date TEXT, end_date TEXT, notes TEXT NOT NULL, archived INTEGER NOT NULL CHECK(archived IN (0,1)), CHECK(end_date IS NULL OR start_date IS NULL OR end_date>=start_date)) STRICT;
+CREATE INDEX contacts_org ON contacts(org_id);
+CREATE INDEX notes_contact_at ON notes(contact_id,at);
+CREATE INDEX skills_search ON skills(skill);
+CREATE INDEX employment_org ON employment_history(org_id);
+CREATE UNIQUE INDEX employment_current ON employment_history(contact_id) WHERE end_date IS NULL;
+CREATE INDEX contracts_contact ON contracts(contact_id);
+CREATE INDEX contracts_org ON contracts(org_id);
+CREATE INDEX revisions_note ON note_revisions(note_id);
+PRAGMA user_version=1;

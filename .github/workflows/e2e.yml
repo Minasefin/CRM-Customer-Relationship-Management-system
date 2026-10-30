@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -27,9 +27,18 @@ jobs:
       - name: Build the database module for Electron
         run: npx electron-rebuild --force --only better-sqlite3-multiple-ciphers
       - name: Let Electron's sandbox run on this machine
+        # Chromium's sandbox needs a setuid helper on Linux runners. If this runner won't
+        # allow it, fall back to running the test without it (test machine only; the app
+        # itself is unchanged).
         run: |
-          sudo chown root:root node_modules/electron/dist/chrome-sandbox
-          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+          set -x
+          ls -la node_modules/electron/dist/chrome-sandbox || true
+          if sudo chown root:root node_modules/electron/dist/chrome-sandbox && sudo chmod 4755 node_modules/electron/dist/chrome-sandbox; then
+            echo "sandbox helper ready"
+          else
+            echo "::warning::Could not set up the sandbox helper; running the test without Chromium's sandbox"
+            echo "ELECTRON_DISABLE_SANDBOX=1" >> "$GITHUB_ENV"
+          fi
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
       - name: Build the app
         run: npm run build

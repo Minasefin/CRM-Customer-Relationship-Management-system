@@ -23,11 +23,10 @@ npm run dev:db              # app on an encrypted test database, filled with the
 npm run dev:db -- --reset   # wipe the test database and start fresh
 ```
 
-The first run builds the database module for Electron (a minute, once) and creates `.dev-key`, a random test key that stays on your computer. It is gitignored and blocked by the secret scan. The sidebar says **Saved on this computer** in this mode, and **Sample data, not saved** otherwise.
+The first run creates `.dev-key`, a random test key that stays on your computer. It is gitignored and blocked by the secret scan. The sidebar says **Saved on this computer** in this mode, and **Sample data, not saved** otherwise.
 
-- The build needs compiler tools: on Mac `xcode-select --install`; on Windows, Visual Studio Build Tools with "Desktop development with C++".
 - This test key is for development only. The installed app ignores it; real users will unlock with the login.
-- `npm run test:db` runs Adrian's database tests (it rebuilds the module for plain Node; the next `npm run dev:db` switches it back).
+- `npm run test:db` runs Adrian's database tests.
 
 ## Folders
 

@@ -25,6 +25,11 @@ async function step(name, fn) {
   } catch (err) {
     results.push(`FAIL  ${name}`);
     console.error(`FAIL  ${name}\n${err.stack || err}`);
+    // Shows up as an annotation on the GitHub check, so the reason is visible without opening the log.
+    if (process.env.GITHUB_ACTIONS) {
+      const msg = String(err.message || err).split('\n').slice(0, 4).join(' | ').replace(/%/g, '%25');
+      console.log(`::error title=${name}::${msg}`);
+    }
     throw err;
   }
 }
@@ -34,6 +39,12 @@ async function launch(key, extraEnv = {}) {
     args: ['.'],
     env: { ...process.env, CRM_DEV_KEY: key, CRM_USER_DATA: DATA_DIR, VITE_DEV_SERVER_URL: '', ...extraEnv },
   });
+  for (const stream of [app.process().stdout, app.process().stderr]) {
+    stream.on('data', (d) => {
+      const line = String(d).trim().split('\n')[0];
+      if (/\[database\]|\[db:/.test(line) && process.env.GITHUB_ACTIONS) console.log(`::warning title=App log::${line}`);
+    });
+  }
   const page = await app.firstWindow();
   page.setDefaultTimeout(10_000);
   page.on('pageerror', (e) => console.error('[page error]', e.message));

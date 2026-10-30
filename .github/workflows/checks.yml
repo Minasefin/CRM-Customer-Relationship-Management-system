@@ -31,3 +31,5 @@ jobs:
         run: npm run build
       - name: Database tests
         run: node --test database/database.test.cjs
+      - name: Authentication tests
+        run: npm run test:auth

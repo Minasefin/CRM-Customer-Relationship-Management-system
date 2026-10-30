@@ -13,6 +13,8 @@
     "check:secrets": "node scripts/check-secrets.mjs",
     "dev:db": "node scripts/dev-db.mjs",
     "test:db": "node --test database/database.test.cjs",
+    "test:auth": "node --test auth/auth.test.cjs",
+    "test:auth:electron": "node auth/run-electron-smoke.cjs",
     "dist": "npm run build && electron-builder --publish never",
     "dist:mac": "npm run build && electron-builder --mac --publish never",
     "dist:win": "npm run build && electron-builder --win --publish never",

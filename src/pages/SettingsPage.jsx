@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useSettings } from '../hooks/useSettings.js';
+import PasswordField, { passwordLength } from '../components/PasswordField.jsx';
 
 function Toggle({ id, checked, onChange, disabled }) {
   return (
@@ -12,6 +14,76 @@ function Toggle({ id, checked, onChange, disabled }) {
     >
       <span className="toggle-knob" />
     </button>
+  );
+}
+
+// Change password. The database is re-encrypted with the new one; nothing else changes.
+function ChangePassword() {
+  const blank = { current: '', next: '', again: '' };
+  const [f, setF] = useState(blank);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState('');
+  const set = (k) => (v) => { setF({ ...f, [k]: v }); setError(''); setDone(''); };
+  const len = passwordLength(f.next);
+
+  const cancel = () => { setF(blank); setError(''); setOpen(false); };
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!f.current) return setError('Enter your current password.');
+    if (len < 15) return setError('Use at least 15 characters for the new password.');
+    if (f.next !== f.again) return setError("The new passwords don't match.");
+    setBusy(true);
+    let result;
+    try {
+      result = await window.crm.api.changePassword(f.current, f.next);
+    } catch (err) {
+      result = { ok: false, error: (err && (err.userMessage || err.message)) || 'That did not work. Try again.' };
+    }
+    setBusy(false);
+    if (result && result.ok) {
+      setF(blank);
+      setOpen(false);
+      setDone('Password changed. Use the new one next time you unlock.');
+    } else {
+      setF({ ...f, current: '' });
+      setError((result && result.error) || 'That did not work. Try again.');
+    }
+  };
+
+  if (!open) {
+    return (
+      <div className="setting-row">
+        <div>
+          <span className="setting-label">Password</span>
+          <p className="muted small">{done || 'Your password encrypts everything saved in the app.'}</p>
+        </div>
+        <button className="btn-ghost" onClick={() => { setOpen(true); setDone(''); }}>Change password</button>
+      </div>
+    );
+  }
+  return (
+    <form className="setting-row change-password" onSubmit={submit} noValidate>
+      <div className="change-password-fields">
+        <span className="setting-label">Change password</span>
+        <PasswordField id="current-password" label="Current password" value={f.current} onChange={set('current')} autoComplete="current-password" autoFocus />
+        <PasswordField
+          id="next-password"
+          label="New password"
+          value={f.next}
+          onChange={set('next')}
+          autoComplete="new-password"
+          hint={<small className={'pw-count' + (len >= 15 ? ' is-ok' : '')}>{len >= 15 ? `${len} characters, long enough` : `${len} of 15 characters`}</small>}
+        />
+        <PasswordField id="again-password" label="Type the new one again" value={f.again} onChange={set('again')} autoComplete="new-password" invalid={f.again.length > 0 && f.again !== f.next} />
+        {error && <p className="save-error" role="alert">{error}</p>}
+        <div className="btn-row">
+          <button className="btn-primary" disabled={busy}>{busy ? 'Changing…' : 'Change password'}</button>
+          <button type="button" className="btn-ghost" onClick={cancel}>Cancel</button>
+        </div>
+      </div>
+    </form>
   );
 }
 
@@ -30,7 +102,7 @@ function HourSelect({ value, onChange, disabled, label }) {
   );
 }
 
-export default function SettingsPage({ theme }) {
+export default function SettingsPage({ theme, canLock = false }) {
   const [s, update] = useSettings();
 
   return (
@@ -100,13 +172,25 @@ export default function SettingsPage({ theme }) {
 
       <section className="settings-group">
         <h2>Security</h2>
-        <div className="setting-row is-disabled">
-          <div>
-            <span className="setting-label">Lock the app after inactivity</span>
-            <p className="muted small">Coming with the login screen.</p>
+        {canLock ? (
+          <>
+            <div className="setting-row">
+              <div>
+                <span className="setting-label">Automatic lock</span>
+                <p className="muted small">The app locks after 15 minutes without use, and right away when the computer sleeps or its screen locks.</p>
+              </div>
+              <button className="btn-ghost" onClick={() => window.crm.api.logout()}>Lock now</button>
+            </div>
+            <ChangePassword />
+          </>
+        ) : (
+          <div className="setting-row is-disabled">
+            <div>
+              <span className="setting-label">Password and automatic lock</span>
+              <p className="muted small">Available when you're signed in to your saved data. Sample data has no password.</p>
+            </div>
           </div>
-          <Toggle checked={false} disabled onChange={() => {}} />
-        </div>
+        )}
       </section>
     </>
   );

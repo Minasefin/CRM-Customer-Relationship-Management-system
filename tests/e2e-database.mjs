@@ -48,7 +48,7 @@ async function launch(key, extraEnv = {}) {
   const page = await app.firstWindow();
   page.setDefaultTimeout(10_000);
   page.on('pageerror', (e) => console.error('[page error]', e.message));
-  await page.waitForSelector('.sidebar');
+  await page.waitForSelector('.sidebar, .auth-card');
   // Calls the same functions the screens use, for checks the UI can't show directly.
   const call = (name, ...args) =>
     page.evaluate(([n, a]) => window.crm.api[n](...a), [name, args]);
@@ -241,7 +241,10 @@ try {
   await step('a wrong key does not open the data and says so', async () => {
     await page.getByText("The test database didn't open.").waitFor();
     assert.equal(await page.evaluate(() => window.crm.dataMode), 'sample');
-    assert.equal(await page.evaluate(() => typeof window.crm.api), 'undefined');
+    // Auth keeps the API exposed while locked; data access must still fail.
+    assert.equal(await page.evaluate(() => typeof window.crm.api.login), 'function');
+    assert.equal(await page.evaluate(() => typeof window.crm.api.getContacts), 'function');
+    await assert.rejects(() => page.evaluate(() => window.crm.api.getContacts()));
     await page.getByText('Sample data, not saved').waitFor();
   });
 
@@ -250,7 +253,8 @@ try {
   // ---------- Fourth run: no key at all ----------
   ({ app, page } = await launch(''));
 
-  await step('without a key the app runs on sample data, no warning', async () => {
+  await step('without a key the real database stays locked behind the password screen', async () => {
+    await page.getByRole('heading', { name: 'Create your password' }).waitFor();
     assert.equal(await page.evaluate(() => window.crm.dataMode), 'sample');
     assert.equal(await page.getByText("The test database didn't open.").count(), 0);
   });

@@ -1,16 +1,14 @@
 // Connects Adrian's database (database/index.cjs) to the app's screens.
 //
-// Until Nic's login exists, the database can only be opened with a DEVELOPMENT-ONLY key:
+// The separate test database can be opened with a DEVELOPMENT-ONLY key:
 //   npm run dev:db        (creates a local .dev-key file the first time; never committed)
 // That path is refused in an installed (packaged) app, so it can't become a login bypass.
-// Without a key, nothing here loads and the app uses its built-in sample data.
-//
-// When Nic's login lands: login() derives the key and calls the same openDatabase(key);
-// the handlers below don't change.
+// Otherwise auth opens the production database only after password verification.
 const { app, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { handle } = require('./ipc.cjs');
+const { handle, isAppUrl } = require('./ipc.cjs');
+const { setupAuthBridge, disableAuthForDevelopmentDatabase } = require('./auth-bridge.cjs');
 
 // The functions the screens may call. Key and lifecycle functions are never exposed.
 const UI_FUNCTIONS = [
@@ -36,10 +34,24 @@ function devKeyFromEnv() {
 async function setupDatabaseBridge() {
   // Answered once by the preload script so it knows whether to expose the database functions.
   ipcMain.on('crm:dbStatus', (event) => {
-    event.returnValue = { ...status };
+    event.returnValue = isAppUrl(event.senderFrame?.url) ? { ...status } : { enabled: false, mode: 'sample', error: null };
   });
 
   const key = devKeyFromEnv();
+  if (!key && (app.isPackaged || !process.env.CRM_DEV_KEY)) {
+    const { createDatabase } = require('../database/index.cjs');
+    const db = createDatabase(path.join(app.getPath('userData'), 'crm.db'));
+    const auth = setupAuthBridge(db);
+    // Getters make the existing preload handshake reflect the current session.
+    status = { get enabled() { return auth.isUnlocked(); },
+      get mode() { return auth.isUnlocked() ? 'database' : 'sample'; }, error: null };
+    for (const name of UI_FUNCTIONS) handle(`db:${name}`, (...args) => {
+      auth.assertUnlocked();
+      return db[name](...args);
+    });
+    return status;
+  }
+  disableAuthForDevelopmentDatabase();
   if (!key) return status;
 
   let db;

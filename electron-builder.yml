@@ -12,6 +12,10 @@ files:
   - electron/**/*
   - database/index.cjs
   - database/schema.sql
+  - auth/index.cjs
+  - auth/password-policy.cjs
+  - auth/blocked-passwords.sha256
+  - auth/BLOCKLIST-LICENSE.txt
   - package.json
   # The database module ships ready-made compiled files for every system; drop its source code.
   - '!node_modules/better-sqlite3-multiple-ciphers/{src,deps}/**'

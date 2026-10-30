@@ -12,7 +12,7 @@
     "start": "npm run build && electron .",
     "check:secrets": "node scripts/check-secrets.mjs",
     "dev:db": "node scripts/dev-db.mjs",
-    "test:db": "npm rebuild better-sqlite3-multiple-ciphers && node --test database/database.test.cjs",
+    "test:db": "node --test database/database.test.cjs",
     "dist": "npm run build && electron-builder --publish never",
     "dist:mac": "npm run build && electron-builder --mac --publish never",
     "dist:win": "npm run build && electron-builder --win --publish never",
@@ -22,7 +22,6 @@
     "better-sqlite3-multiple-ciphers": "^13.0.3"
   },
   "devDependencies": {
-    "@electron/rebuild": "4.2.1",
     "@fontsource-variable/plus-jakarta-sans": "^5.1.0",
     "@vitejs/plugin-react": "^5.2.0",
     "concurrently": "^9.1.0",

@@ -24,8 +24,6 @@ jobs:
         run: |
           npm ci
           npm install --no-save playwright-core@1.63.0
-      - name: Build the database module for Electron
-        run: npx electron-rebuild --force --only better-sqlite3-multiple-ciphers
       - name: Let Electron's sandbox run on this machine
         # Chromium's sandbox needs a setuid helper on Linux runners. If this runner won't
         # allow it, fall back to running the test without it (test machine only; the app

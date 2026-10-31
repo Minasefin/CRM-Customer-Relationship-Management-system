@@ -29,14 +29,16 @@ app.whenReady().then(async () => {
   const wc = window.webContents;
   const evaluate = source => wc.executeJavaScript(source);
   const call = (name, ...args) => evaluate(`window.crm.api[${JSON.stringify(name)}](...${JSON.stringify(args)})`);
-  const mode = expected => until(async () => !wc.isLoading() && await evaluate(`window.crm?.dataMode === ${JSON.stringify(expected)} && !!document.querySelector('.sidebar')`));
+  const mode = expected => until(async () => !wc.isLoading() && await evaluate(`window.crm?.dataMode === ${JSON.stringify(expected)} && !!document.querySelector(${JSON.stringify(expected === 'sample' ? '.auth-card' : '.sidebar')})`));
   const first = `Synthetic Electron ${randomBytes(16).toString('hex')}`;
   const second = `Synthetic replacement ${randomBytes(16).toString('hex')}`;
   await mode('sample');
   assert.equal(await call('isSetUp'), false);
   assert.equal(await evaluate('Object.keys(window.crm.api).length'), 24);
   await assert.rejects(call('getContacts'), /locked/);
-  assert.equal(await evaluate('document.body.textContent.includes("Sample data, not saved")'), true);
+  // Locked: the create-password screen is shown, not the app.
+  assert.equal(await evaluate('document.body.textContent.includes("Create your password")'), true);
+  assert.equal(await evaluate('!!document.querySelector(".sidebar")'), false);
 
   assert.deepEqual(await call('setUpPassword', first), { ok: true });
   await mode('database');

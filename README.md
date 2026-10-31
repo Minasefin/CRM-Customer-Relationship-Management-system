@@ -14,7 +14,7 @@ npm run dev        # opens the desktop app with live reload
 npm run dev:web    # UI only, in your browser at http://localhost:5173
 ```
 
-`npm run dev` uses made-up sample data from `src/api/mockData.js`. Nothing is saved; it resets on restart.
+`npm run dev` opens the app the way the client will see it: the first time, it asks you to create a password, then everything you add is encrypted and saved on your computer. (Testing only, so use a throwaway password. "Look around with sample data" skips it.)
 
 ### Run on the real encrypted database (test mode)
 

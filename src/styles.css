@@ -615,3 +615,42 @@ select:disabled { opacity: 0.7; cursor: not-allowed; }
 .note-edit-form { margin-top: 6px; }
 .note-edit-form .btn-row { margin-top: 10px; }
 @media (hover: none) { .note-edit { opacity: 1; } }
+
+/* Password screens (create password, sign in, locked) */
+.auth-screen {
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; padding: 32px 16px; background: var(--bg); color: var(--ink);
+}
+.auth-card {
+  width: 100%; max-width: 440px; padding: 32px; border-radius: var(--radius-card);
+  background: var(--surface); box-shadow: var(--shadow); border: 1px solid var(--line);
+}
+.auth-brand { padding: 0; margin-bottom: 24px; }
+.auth-card h1 { margin: 0; font-size: 26px; letter-spacing: -0.02em; }
+.auth-sub { margin: 8px 0 22px; color: var(--muted); line-height: 1.5; }
+.auth-form { display: flex; flex-direction: column; gap: 16px; }
+.auth-submit { justify-content: center; padding: 12px 18px; font-size: 15px; }
+.auth-warning {
+  margin: 0; padding: 12px 14px; border-radius: 12px; font-size: 13.5px; line-height: 1.5;
+  background: color-mix(in srgb, var(--stale) 14%, transparent); color: var(--ink);
+}
+.auth-note { margin: 0; text-align: center; }
+.auth-foot .link-btn { font-size: 13.5px; color: var(--muted); }
+.auth-form .save-error { margin: 0; }
+
+.password-box { position: relative; }
+.password-box input { padding-right: 44px; }
+.password-toggle {
+  position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+  width: 32px; height: 32px; display: grid; place-items: center;
+  border: 0; border-radius: 8px; background: transparent; color: var(--muted);
+}
+.password-toggle:hover { color: var(--ink); background: var(--sky-soft); }
+.password-toggle:focus-visible { outline: 2px solid var(--sky); }
+.pw-count { color: var(--muted); font-size: 13px; }
+.pw-count.is-ok { color: var(--fresh); font-weight: 600; }
+
+.change-password { align-items: flex-start; }
+.change-password-fields { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 420px; }
+.field > .field-label { font-size: 13px; font-weight: 600; color: var(--muted); }
+.setting-row .btn-ghost { white-space: nowrap; flex: none; }

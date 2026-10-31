@@ -14,20 +14,26 @@
     "dev:db": "node scripts/dev-db.mjs",
     "test:db": "node --test database/database.test.cjs",
     "test:auth": "node --test auth/auth.test.cjs",
-    "test:auth:electron": "node auth/run-electron-smoke.cjs"
+    "test:auth:electron": "node auth/run-electron-smoke.cjs",
+    "dist": "npm run build && electron-builder --publish never",
+    "dist:mac": "npm run build && electron-builder --mac --publish never",
+    "dist:win": "npm run build && electron-builder --win --publish never",
+    "dist:linux": "npm run build && electron-builder --linux --publish never"
   },
   "dependencies": {
-    "@fontsource-variable/plus-jakarta-sans": "^5.1.0",
-    "better-sqlite3-multiple-ciphers": "^13.0.3",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "better-sqlite3-multiple-ciphers": "^13.0.3"
   },
   "devDependencies": {
+    "@fontsource-variable/plus-jakarta-sans": "^5.1.0",
     "@vitejs/plugin-react": "^5.2.0",
     "concurrently": "^9.1.0",
     "cross-env": "^7.0.3",
     "electron": "^44.9.3",
+    "electron-builder": "26.17.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "vite": "^7.3.7",
     "wait-on": "^8.0.1"
-  }
+  },
+  "author": "Mina, Adrian and Nic"
 }

@@ -57,10 +57,12 @@ Until the login exists, developers open the database with a random test key:
 - No delete functions for contacts, as designed.
 - If the client wants Social Security numbers stored, that field needs extra care: show it masked, and only reveal on request. Ask him first.
 
-## Before we ship (packaging step)
+## Installed app (packaging)
 
-- Turn off Electron "fuses" that let the app run as plain Node or accept debug flags: `RunAsNode`, `EnableNodeCliInspectArguments`, `EnableNodeOptionsEnvironmentVariable`. Turn on `EnableEmbeddedAsarIntegrityValidation` and `OnlyLoadAppFromAsar`.
-- Download the installer from GitHub and test it, the way the client will.
+- Electron "fuses" are set in `electron-builder.yml`: the installed app can't be run as plain Node, ignores debug flags and `NODE_OPTIONS`, only loads its own packaged code, and checks that code hasn't been tampered with. Verified on the Linux build on Oct 28, 2026.
+- The installed app ignores `VITE_DEV_SERVER_URL` and loads only its built-in files (verified on the packaged build).
+- Not signed with a paid certificate (Mac is ad-hoc signed so it runs on Apple Silicon). Users see a one-time warning; `build/Read Me First.html` explains it.
+- Always test by **downloading** the installer from GitHub, the way the client will. The warning only appears on downloaded files.
 
 ## Found a problem?
 

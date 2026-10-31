@@ -26,9 +26,9 @@ Update this section whenever something lands, so everyone (and their AI tools) k
 | Area | Status | Next step |
 | --- | --- | --- |
 | UI (Mina) | All screens done and connected to the database: contacts, profile (notes with edit, call/text, status, work history), firms, contracts with notes, Home, Statistics, Archived (people, firms, contracts), settings, sounds-like search. Save errors show in plain English. Login: create-password, sign-in and locked screens, Lock button, change password in Settings. | Polish after the client demo |
-| Database (Adrian) | Encrypted SQLite built (`database/`), with tests. Connected to the app; `npm run dev:db` runs it with a test key. | Help wire the login's key into `openDatabase` |
-| Auth (Nic) | Five auth functions and Electron wiring implemented with offline password screening, scrypt, persistent throttling, recoverable rekeying and 15-minute/sleep locking. Tests in `auth/`. | Mina's login/setup screens; installed cross-platform verification. See `auth/README.md` for the hand-off. |
-| Shared | `docs/API.md` agreed Oct 29. Every pull request runs the app on a real encrypted database and clicks through it. | Installers must include the database module |
+| Database (Adrian) | Encrypted SQLite built (`database/`), with tests. Connected to the app; `npm run dev:db` runs it with a test key. | Connected to Nic's login (the password unlocks it) |
+| Auth (Nic) | Five auth functions and Electron wiring implemented with offline password screening, scrypt, persistent throttling, recoverable rekeying and 15-minute/sleep locking. Tests in `auth/`. | Installed cross-platform verification. See `auth/README.md`. |
+| Shared | `docs/API.md` agreed Oct 29. Every pull request runs the app on a real encrypted database and clicks through it. Installers for Mac/Windows/Linux build on GitHub and include the database and login. | Tag `v0.1.0` for the Oct 31 release |
 
 ## What the app stores
 

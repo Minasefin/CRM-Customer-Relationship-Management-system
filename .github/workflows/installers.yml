@@ -53,6 +53,17 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false' # no paid signing certificate
 
+      - name: Check the app has its database file and nothing extra
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in macOS) P=darwin;; Windows) P=win32;; *) P=linux;; esac
+          NODE=$(find release -path '*app.asar.unpacked*' -name "$P-*.node" | head -1)
+          [ -n "$NODE" ] && echo "Database file: $NODE" || { echo "::error::No $P database file in the app"; exit 1; }
+          ASAR=$(find release -name app.asar | head -1)
+          if npx --yes @electron/asar@3.4.1 list "$ASAR" | grep -E '^[/\\](src|tests|scripts|docs)[/\\]|\.dev-key'; then
+            echo "::error::Source or test files ended up inside the app"; exit 1
+          fi
+          echo "App contents OK"
       - name: Check the Mac app opens
         if: runner.os == 'macOS'
         run: |

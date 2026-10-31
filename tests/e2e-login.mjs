@@ -113,8 +113,25 @@ try {
     await page.getByRole('button', { name: 'Sign in to your data' }).click();
     await page.getByRole('heading', { name: 'Locked' }).waitFor();
   });
-  await app.close();
-  await app.close();
+  await s('closing the window (red ✕) while signed in quits without an error', async () => {
+    await page.getByLabel('Password', { exact: true }).fill(PW2);
+    await page.getByRole('button', { name: 'Unlock' }).click();
+    await page.getByText('Saved on this computer').waitFor();
+    const proc = app.process(); // keep the handle: it's unreachable once the app quits
+    let output = '';
+    proc.stderr.on('data', (d) => (output += d));
+    // Report any main-process crash to stderr instead of a blocking error box.
+    await app.evaluate(() => {
+      process.on('uncaughtException', (e) => process.stderr.write(`UNCAUGHT ${e && e.message}\n`));
+    });
+    const exited = new Promise((resolve) => proc.once('exit', resolve));
+    // Close a moment later, so this call returns before the app quits.
+    await app.evaluate(({ BrowserWindow }) => { setTimeout(() => BrowserWindow.getAllWindows()[0].close(), 100); });
+    await Promise.race([exited, new Promise((r) => setTimeout(r, 8000))]);
+    if (/UNCAUGHT/.test(output)) throw new Error(output.split('\n').find((l) => l.includes('UNCAUGHT')));
+    if (proc.exitCode === null) throw new Error('The app did not quit after its window closed.');
+  });
+  await app.close().catch(() => {});
 } finally {
   rmSync(DIR, { recursive: true, force: true });
 }

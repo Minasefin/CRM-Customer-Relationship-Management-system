@@ -10,8 +10,12 @@ function setupAuthBridge(database) {
     database,
     directory: app.getPath('userData'),
     onLock() {
+      // Tell each open window to clear its screen. A window that is closing (red ✕)
+      // may already be gone; skip it instead of crashing on the way out.
       for (const window of BrowserWindow.getAllWindows()) {
-        if (!window.isDestroyed()) window.webContents.send('crm:locked');
+        try {
+          if (!window.isDestroyed() && !window.webContents.isDestroyed()) window.webContents.send('crm:locked');
+        } catch {}
       }
     },
   });

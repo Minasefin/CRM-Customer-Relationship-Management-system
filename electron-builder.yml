@@ -17,12 +17,18 @@ files:
   - auth/blocked-passwords.sha256
   - auth/BLOCKLIST-LICENSE.txt
   - package.json
-  # The database module ships ready-made compiled files for every system; drop its source code.
+  # The database module ships ready-made compiled files for every system; keep only
+  # this system's (${platform} = darwin, win32 or linux) and drop its source code.
   - '!node_modules/better-sqlite3-multiple-ciphers/{src,deps}/**'
+  - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/!(${platform}-*).node'
+  - '!node_modules/better-sqlite3-multiple-ciphers/binding.gyp'
 # The encrypted database is a compiled module; it can't run from inside the app archive.
 asarUnpack:
   - node_modules/better-sqlite3-multiple-ciphers/**/*
 asar: true
+# Keep only English for Chromium's built-in text (dialogs, spell check menus).
+# The app itself is English; the other ~50 languages are dead weight.
+electronLanguages: [en, en-US, en-GB]
 # The database module ships ready-made compiled files that work in Electron, so skip
 # compiling it (no C++ tools needed to build the installers).
 npmRebuild: false
@@ -48,9 +54,6 @@ mac:
   identity: '-'
   hardenedRuntime: false
   artifactName: Contractor-CRM-${version}-mac.${ext}
-  # Each installer keeps only its own system's compiled database file.
-  files:
-    - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/{linux,linuxmusl,win32}-*.node'
   # The Mac app runs on Intel and Apple Silicon; the database has a file for each, used as-is.
   x64ArchFiles: '**/better-sqlite3-multiple-ciphers/prebuilds/darwin-*.node'
 
@@ -60,19 +63,18 @@ dmg:
   iconSize: 80
   window:
     width: 540
-    height: 420
+    height: 512 # background is 480 tall; the extra covers the window's title bar
   contents:
-    - { x: 140, y: 168, type: file }
-    - { x: 400, y: 168, type: link, path: /Applications }
-    - { x: 270, y: 340, type: file, path: build/Read Me First.html }
+    - { x: 140, y: 140, type: file }
+    - { x: 400, y: 140, type: link, path: /Applications }
+    - { x: 270, y: 372, type: file, path: build/Read Me First.html }
+  format: ULFO # newer Mac compression: smaller download, opens on macOS 10.11 and later
 
 win:
   target:
     - target: nsis
       arch: x64
   artifactName: Contractor-CRM-${version}-windows-setup.${ext}
-  files:
-    - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/{darwin,linux,linuxmusl}-*.node'
 
 nsis:
   oneClick: true
@@ -84,5 +86,3 @@ linux:
   target: AppImage
   category: Office
   artifactName: Contractor-CRM-${version}-linux.${ext}
-  files:
-    - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/{darwin,win32}-*.node'

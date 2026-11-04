@@ -851,6 +851,7 @@ select:disabled { opacity: 0.7; cursor: not-allowed; }
 /* Settings: one centered column (title and cards line up) */
 .settings-group { margin-left: auto; margin-right: auto; }
 .settings-head > div { width: 100%; max-width: 720px; margin: 0 auto; }
+.more-menu.is-floating { position: fixed; right: auto; z-index: 70; }
 
 /* Forms (add/edit contact, firm, contract) open as a centered pop-up, like the other
    pop-ups, instead of a panel sliding in from the side. */

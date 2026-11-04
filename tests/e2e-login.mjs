@@ -59,7 +59,7 @@ try {
     await page.getByLabel('Password', { exact: true }).fill(PW);
     await page.getByLabel('Type it again', { exact: true }).fill(PW);
     await page.getByRole('button', { name: 'Create password and open' }).click();
-    await page.getByText('Saved on this computer').waitFor();
+    await page.waitForFunction(() => window.crm?.dataMode === 'database' && document.querySelector('.sidebar'));
   });
   await s('empty app, add an org', async () => {
     await page.locator('.nav').getByRole('button', { name: /^Organizations/ }).click();
@@ -83,7 +83,7 @@ try {
     await page.getByRole('button', { name: 'Unlock' }).waitFor({ timeout: 8000 });
     await page.getByLabel('Password', { exact: true }).fill(PW);
     await page.getByRole('button', { name: 'Unlock' }).click();
-    await page.getByText('Saved on this computer').waitFor();
+    await page.waitForFunction(() => window.crm?.dataMode === 'database' && document.querySelector('.sidebar'));
   });
   await s('change password in settings', async () => {
     await page.locator('.sidebar-foot').getByRole('button', { name: /^Settings/ }).click();
@@ -100,7 +100,7 @@ try {
     await page.getByRole('heading', { name: 'Welcome back' }).waitFor();
     await page.getByLabel('Password', { exact: true }).fill(PW2);
     await page.getByRole('button', { name: 'Unlock' }).click();
-    await page.getByText('Saved on this computer').waitFor();
+    await page.waitForFunction(() => window.crm?.dataMode === 'database' && document.querySelector('.sidebar'));
     await page.locator('.nav').getByRole('button', { name: /^Organizations/ }).click();
     await page.getByText('Synthetic Test Firm').first().waitFor();
   });
@@ -116,7 +116,7 @@ try {
   await s('closing the window (red ✕) while signed in quits without an error', async () => {
     await page.getByLabel('Password', { exact: true }).fill(PW2);
     await page.getByRole('button', { name: 'Unlock' }).click();
-    await page.getByText('Saved on this computer').waitFor();
+    await page.waitForFunction(() => window.crm?.dataMode === 'database' && document.querySelector('.sidebar'));
     const proc = app.process(); // keep the handle: it's unreachable once the app quits
     let output = '';
     proc.stderr.on('data', (d) => (output += d));

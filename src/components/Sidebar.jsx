@@ -33,7 +33,7 @@ export default function Sidebar({ page, onNavigate, counts, theme, onToggleTheme
   return (
     <aside className={'sidebar' + (collapsed ? ' is-collapsed' : '')}>
       <div className="brand">
-        <Logo size={36} />
+        <Logo size={46} />
         <div className="brand-text">
           <div className="brand-name">Auria</div>
           <div className="brand-sub">Your Network. Secured.</div>
@@ -52,13 +52,6 @@ export default function Sidebar({ page, onNavigate, counts, theme, onToggleTheme
       <nav className="nav">{main.map(item)}</nav>
 
       <div className="sidebar-foot">
-        <div
-          className={'data-status' + (dataMode === 'database' ? '' : ' is-sample')}
-          title={dataMode === 'database' ? 'Everything is saved, encrypted, on this computer' : 'Sample data: nothing you add is saved'}
-        >
-          <span className="data-dot" aria-hidden="true" />
-          <span className="nav-label">{dataMode === 'database' ? 'Saved on this computer' : 'Sample data, not saved'}</span>
-        </div>
         {canLock && (
           <button
             className="lock-btn"

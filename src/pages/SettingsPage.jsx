@@ -107,7 +107,7 @@ export default function SettingsPage({ theme, canLock = false }) {
 
   return (
     <>
-      <header className="page-head">
+      <header className="page-head settings-head">
         <div>
           <h1>Settings</h1>
           <p className="page-sub">Changes save automatically.</p>

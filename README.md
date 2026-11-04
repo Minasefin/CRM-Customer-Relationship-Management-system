@@ -1,4 +1,4 @@
-# Contractor CRM
+# Auria
 
 A secure, offline desktop CRM for managing military contractors and the firms that employ them. Built with Electron, React and SQLite. Runs on macOS, Windows and Linux.
 

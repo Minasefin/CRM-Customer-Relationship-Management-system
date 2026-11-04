@@ -2,7 +2,7 @@
 #   npm run dist        (installer for the computer you're on)
 # The GitHub "Installers" workflow builds all three.
 appId: edu.tntech.contractorcrm
-productName: Contractor CRM
+productName: Auria
 copyright: Mina, Adrian and Nic
 directories:
   output: release
@@ -53,12 +53,12 @@ mac:
   # The Mac will warn once on first open; Read Me First explains the fix.
   identity: '-'
   hardenedRuntime: false
-  artifactName: Contractor-CRM-${version}-mac.${ext}
+  artifactName: Auria-${version}-mac.${ext}
   # The Mac app runs on Intel and Apple Silicon; the database has a file for each, used as-is.
   x64ArchFiles: '**/better-sqlite3-multiple-ciphers/prebuilds/darwin-*.node'
 
 dmg:
-  title: Contractor CRM
+  title: Auria
   background: build/background.png
   iconSize: 80
   window:
@@ -74,15 +74,15 @@ win:
   target:
     - target: nsis
       arch: x64
-  artifactName: Contractor-CRM-${version}-windows-setup.${ext}
+  artifactName: Auria-${version}-windows-setup.${ext}
 
 nsis:
   oneClick: true
   perMachine: false
   createDesktopShortcut: true
-  shortcutName: Contractor CRM
+  shortcutName: Auria
 
 linux:
   target: AppImage
   category: Office
-  artifactName: Contractor-CRM-${version}-linux.${ext}
+  artifactName: Auria-${version}-linux.${ext}

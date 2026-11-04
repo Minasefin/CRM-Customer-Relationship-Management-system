@@ -2,16 +2,16 @@
 
 | Your computer | Download |
 | --- | --- |
-| **Mac** (Apple Silicon or Intel) | `Contractor-CRM-…-mac.dmg` |
-| **Windows** | `Contractor-CRM-…-windows-setup.exe` |
-| **Linux** | `Contractor-CRM-…-linux.AppImage` |
+| **Mac** (Apple Silicon or Intel) | `Auria-…-mac.dmg` |
+| **Windows** | `Auria-…-windows-setup.exe` |
+| **Linux** | `Auria-…-linux.AppImage` |
 
 ## Opening it the first time
 
 Your computer will block the app once, because it isn't from the App Store or Microsoft Store. That's expected, and you only do this once. Full steps with a one-click button are in **Read Me First** (inside the Mac installer, and attached below).
 
 **Mac**
-1. Open the `.dmg` and drag **Contractor CRM** into **Applications**.
+1. Open the `.dmg` and drag **Auria** into **Applications**.
 2. Open it from Applications. When your Mac says it can't verify the app, click **Done** (not Move to Trash).
 3. Go to **System Settings → Privacy & Security**, scroll to **Security**, and click **Open Anyway**. Enter your password and click **Open Anyway** again.
 
@@ -27,4 +27,4 @@ The app asks you to **create a password** (at least 15 characters; a few random 
 
 The app locks itself after 15 minutes without use, and when your computer sleeps or its screen locks. To look around first, choose **Look around with sample data** (nothing is saved).
 
-Contractor CRM works completely offline. Everything you enter stays on your computer.
+Auria works completely offline. Everything you enter stays on your computer.

@@ -3,10 +3,30 @@
 // so the UI can call them through the preload bridge. See docs/API.md and SECURITY.md.
 const { app, BrowserWindow, shell, session } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { isAppUrl, DEV_URL } = require('./ipc.cjs');
 const { setupDatabaseBridge } = require('./database-bridge.cjs');
 
-app.setName('Contractor CRM');
+app.setName('Auria');
+
+// The app was called "Contractor CRM" before v0.2. Its data folder is named after the app,
+// so move an existing one across once, the first time Auria starts. Nothing is copied or
+// deleted; if the move can't happen (for example the old app is still open), keep using
+// the old folder so nobody ends up looking at an empty app.
+(function useOldDataFolderIfNeeded() {
+  if (!app.isPackaged && process.env.CRM_USER_DATA) return; // tests use their own folder
+  const appData = app.getPath('appData');
+  const oldDir = path.join(appData, 'Contractor CRM');
+  const newDir = path.join(appData, 'Auria');
+  const hasData = ['crm.db', 'auth.json'].some((f) => fs.existsSync(path.join(oldDir, f)));
+  if (!hasData || fs.existsSync(newDir)) return;
+  try {
+    fs.renameSync(oldDir, newDir);
+  } catch (err) {
+    console.error('[startup] could not move the old data folder, using it where it is:', err && err.code);
+    app.setPath('userData', oldDir);
+  }
+})();
 // Automated tests run with their own throwaway data folder. Ignored in the installed app.
 if (!app.isPackaged && process.env.CRM_USER_DATA) app.setPath('userData', process.env.CRM_USER_DATA);
 app.enableSandbox(); // every renderer runs in Chromium's sandbox, no Node.js access
@@ -23,7 +43,7 @@ function createWindow() {
     height: 820,
     minWidth: 960,
     minHeight: 640,
-    title: 'Contractor CRM',
+    title: 'Auria',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,

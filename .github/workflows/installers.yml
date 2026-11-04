@@ -67,16 +67,16 @@ jobs:
       - name: Check the Mac app opens
         if: runner.os == 'macOS'
         run: |
-          APP="release/mac-universal/Contractor CRM.app"
+          APP="release/mac-universal/Auria.app"
           codesign --verify --deep "$APP" && echo "Signature OK (ad-hoc)"
-          "$APP/Contents/MacOS/Contractor CRM" & PID=$!
+          "$APP/Contents/MacOS/Auria" & PID=$!
           sleep 15
           kill -0 $PID && echo "App is running" && kill $PID
       - name: Check the Windows app opens
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath "release/win-unpacked/Contractor CRM.exe" -PassThru
+          $p = Start-Process -FilePath "release/win-unpacked/Auria.exe" -PassThru
           Start-Sleep -Seconds 15
           if ($p.HasExited) { Write-Error "App exited with code $($p.ExitCode)"; exit 1 }
           Write-Host "App is running"; Stop-Process -Id $p.Id
@@ -116,4 +116,4 @@ jobs:
         run: |
           cp "build/Read Me First.html" installers/Read-Me-First.html
           gh release create "$GITHUB_REF_NAME" installers/* \
-            --draft --title "Contractor CRM $GITHUB_REF_NAME" --notes-file build/RELEASE_NOTES.md
+            --draft --title "Auria $GITHUB_REF_NAME" --notes-file build/RELEASE_NOTES.md

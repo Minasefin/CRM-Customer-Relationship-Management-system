@@ -1,6 +1,6 @@
 # Demo: the database is encrypted
 
-Five minutes, on a Mac with Contractor CRM installed and a few contacts added.
+Five minutes, on a Mac with Auria installed and a few contacts added.
 It shows that the saved file can't be read by anything except the app, with the password.
 
 **Before you start:** open the app, point out a contact name (for example "Marcus Hale"), then quit with Cmd+Q.
@@ -9,7 +9,7 @@ It shows that the saved file can't be read by anything except the app, with the 
 
 | Mac | Windows | Linux |
 | --- | --- | --- |
-| `~/Library/Application Support/Contractor CRM/` | `%APPDATA%\Contractor CRM\` | `~/.config/Contractor CRM/` |
+| `~/Library/Application Support/Auria/` | `%APPDATA%\Auria\` | `~/.config/Auria/` |
 
 Two files matter:
 - `crm.db`: the encrypted database.
@@ -18,7 +18,7 @@ Two files matter:
 ## 1. In a SQL browser (DB Browser for SQLite)
 
 1. Download **DB Browser for SQLite** from [sqlitebrowser.org](https://sqlitebrowser.org/dl/). It's free.
-2. **File → Open Database**, then press **Cmd+Shift+G** and paste `~/Library/Application Support/Contractor CRM/crm.db`.
+2. **File → Open Database**, then press **Cmd+Shift+G** and paste `~/Library/Application Support/Auria/crm.db`.
 3. It can't open the file. Depending on the version, it either says the file is not a database or asks for an encryption password, and no password opens it.
 
 **Why no password opens it here:** the file is encrypted with **ChaCha20-Poly1305** (SQLite3 Multiple Ciphers). The key isn't the password typed into the app. It's a 256-bit key derived from that password with **scrypt** (a deliberately slow function), and it never leaves the app.
@@ -26,7 +26,7 @@ Two files matter:
 ## 2. Side by side with a normal database (Terminal)
 
 ```bash
-cd ~/Library/"Application Support"/"Contractor CRM"
+cd ~/Library/"Application Support"/"Auria"
 sqlite3 /tmp/plain.db "create table people(name); insert into people values('Marcus Hale');"
 
 head -c 32 /tmp/plain.db | xxd     # starts with "SQLite format 3"

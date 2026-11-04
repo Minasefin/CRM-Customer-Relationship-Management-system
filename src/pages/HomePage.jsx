@@ -39,9 +39,9 @@ export default function HomePage({ contacts, contracts, orgsById, contactsById, 
   const { pinned, togglePin } = usePins();
   const [customizing, setCustomizing] = useState(false);
   const [dragging, setDragging] = useState(null);
-  const [over, setOver] = useState(null);
+  const [over, setOver] = useState(null); // card a dragged card would land before
   const [noteDialog, setNoteDialog] = useState(null); // contact getting a note in the pop-up
-  const [flash, setFlash] = useState(''); // card a dragged card would land before
+  const [flash, setFlash] = useState(''); // "Saved a note for ..." message
   const [noteFor, setNoteFor] = useState('');
   const [text, setText] = useState('');
   const [saved, setSaved] = useState('');
@@ -71,6 +71,36 @@ export default function HomePage({ contacts, contracts, orgsById, contactsById, 
     .slice(0, 6);
 
   const people = [...active].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
+
+  // While a card is being dragged, scroll the page when the pointer nears the top or
+  // bottom edge, so a card can be moved anywhere, not just within the visible area.
+  useEffect(() => {
+    if (!dragging) return;
+    const main = document.querySelector('.main');
+    if (!main) return;
+    let y = null;
+    let frame;
+    const onDragOver = (e) => { y = e.clientY; };
+    const tick = () => {
+      if (y !== null) {
+        const r = main.getBoundingClientRect();
+        const head = main.querySelector('.page-head');
+        const top = r.top + (head ? head.offsetHeight : 0); // below the fixed page title
+        const zone = 90;
+        let speed = 0;
+        if (y < top + zone) speed = -Math.ceil(((top + zone - y) / zone) * 18);
+        else if (y > r.bottom - zone) speed = Math.ceil(((y - (r.bottom - zone)) / zone) * 18);
+        if (speed) main.scrollBy(0, speed);
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    document.addEventListener('dragover', onDragOver);
+    frame = requestAnimationFrame(tick);
+    return () => {
+      document.removeEventListener('dragover', onDragOver);
+      cancelAnimationFrame(frame);
+    };
+  }, [dragging]);
 
   // The "Saved a note for …" message after the pop-up closes fades on its own.
   useEffect(() => {

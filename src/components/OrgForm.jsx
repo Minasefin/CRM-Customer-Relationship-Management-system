@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Drawer from './Drawer.jsx';
 import ImagePicker from './ImagePicker.jsx';
-import { DiscardBar, orgInitials, sameName, SaveError, errorText } from './formBits.jsx';
+import { UnsavedDialog, orgInitials, sameName, SaveError, errorText } from './formBits.jsx';
 
 const blank = { name: '', city: '', country: '', logo: null };
 
@@ -71,7 +71,7 @@ export default function OrgForm({ org, organizations, onSave, onClose }) {
       onSubmit={leaving || saving ? undefined : save}
       footer={
         leaving ? (
-          <DiscardBar onDiscard={onClose} onKeep={() => setLeaving(false)} />
+          <UnsavedDialog onSave={() => { setLeaving(false); save(); }} onDiscard={onClose} onKeep={() => setLeaving(false)} />
         ) : (
           <>
             <SaveError message={saveError} />

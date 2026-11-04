@@ -40,23 +40,31 @@ export default function Sidebar({ page, onNavigate, counts, theme, onToggleTheme
             {dataMode === 'database' ? 'Saved on this computer' : 'Sample data, not saved'}
           </div>
         </div>
-      </div>
-
-      {canLock && (
         <button
-          className="lock-btn"
-          onClick={() => window.crm.api.logout()}
-          title={`Lock now (${shortcut('L')}). Your password opens it again.`}
+          className="collapse-btn"
+          onClick={onToggleCollapsed}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={`${collapsed ? 'Expand' : 'Collapse'} sidebar (${shortcut('B')})`}
         >
-          <Icon name="lock" size={17} />
-          <span className="nav-label">Lock</span>
-          <kbd className="nav-count">{shortcut('L')}</kbd>
+          <Icon name="panel" size={17} />
         </button>
-      )}
+      </div>
 
       <nav className="nav">{main.map(item)}</nav>
 
       <div className="sidebar-foot">
+        {canLock && (
+          <button
+            className="lock-btn"
+            onClick={() => window.crm.api.logout()}
+            title={`Lock now (${shortcut('L')}). Your password opens it again.`}
+          >
+            <Icon name="lock" size={17} />
+            <span className="nav-label">Lock</span>
+            <kbd className="nav-count">{shortcut('L')}</kbd>
+          </button>
+        )}
         {item({ id: 'settings', label: 'Settings', icon: 'settings' })}
         <button
           className="theme-hint"
@@ -65,15 +73,6 @@ export default function Sidebar({ page, onNavigate, counts, theme, onToggleTheme
         >
           <Icon name={theme === 'dark' ? 'moon' : 'sun'} size={15} />
           <span className="nav-label">{theme === 'dark' ? 'Dark mode' : 'Light mode'}</span>
-        </button>
-        <button
-          className="theme-hint collapse-btn"
-          onClick={onToggleCollapsed}
-          aria-expanded={!collapsed}
-          title={`${collapsed ? 'Expand' : 'Collapse'} sidebar (${shortcut('B')})`}
-        >
-          <Icon name="panel" size={15} />
-          <span className="nav-label">Collapse sidebar</span>
         </button>
       </div>
     </aside>

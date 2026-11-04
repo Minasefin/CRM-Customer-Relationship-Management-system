@@ -705,3 +705,19 @@ select:disabled { opacity: 0.7; cursor: not-allowed; }
 }
 .main > .page-top .page-head { margin-bottom: 18px; }
 .main > .page-top .toolbar { margin-bottom: 0; }
+
+/* Enter to confirm a field, Enter again to save */
+.drawer input.is-confirmed {
+  border-color: var(--fresh) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--fresh) 18%, transparent) !important;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='%231e9b6c' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; background-size: 16px;
+}
+.enter-hint {
+  margin: 0; padding: 8px 24px; font-size: 13px; color: var(--muted); text-align: right;
+  border-top: 1px solid var(--line); background: var(--surface-2);
+}
+.enter-hint kbd {
+  font-family: inherit; font-size: 12px; font-weight: 600; padding: 1px 6px; border-radius: 5px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}

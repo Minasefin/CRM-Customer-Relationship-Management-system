@@ -9,6 +9,7 @@ import { SaveError, errorText } from '../components/formBits.jsx';
 import { useActions } from '../lib/dataContext.js';
 import RichTextArea from '../components/RichTextArea.jsx';
 import { RichText, plainText } from '../lib/richText.jsx';
+import { usePins } from '../lib/pins.js';
 
 const formatDateTime = (iso) =>
   new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -86,6 +87,7 @@ export default function ContactProfile({ contact, org, orgsById, contracts, onBa
   const [saving, setSaving] = useState(false);
   const [noteError, setNoteError] = useState('');
   const actions = useActions(); // status changes confirm in the shared pop-up
+  const { isPinned, togglePin } = usePins();
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
@@ -160,6 +162,9 @@ export default function ContactProfile({ contact, org, orgsById, contracts, onBa
               <a className="btn-soft" href={`sms:${mainPhone}`}><Icon name="message" size={16} /> Text</a>
             </>
           )}
+          <button className={'btn-ghost' + (isPinned(contact.id) ? ' is-pinned' : '')} onClick={() => togglePin(contact.id)} aria-pressed={isPinned(contact.id)} title="Show on the Home page">
+            <Icon name="pin" size={15} /> {isPinned(contact.id) ? 'Pinned' : 'Pin'}
+          </button>
           <button className="btn-ghost" onClick={onEdit}><Icon name="edit" size={15} /> Edit</button>
         </div>
       </header>

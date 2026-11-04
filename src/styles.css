@@ -824,3 +824,8 @@ select:disabled { opacity: 0.7; cursor: not-allowed; }
 .data-status.is-sample .data-dot { background: var(--stale); box-shadow: 0 0 0 3px color-mix(in srgb, var(--stale) 18%, transparent); }
 .sidebar.is-collapsed .data-status { justify-content: center; padding: 8px 0; }
 .auth-brand .brand-sub { margin-top: 1px; }
+
+/* Note pop-up (Home's Add note) */
+.note-dialog .rich-area { margin: 4px 0 12px; }
+.note-dialog .save-error { margin: 0 0 12px; }
+.banner-ok { background: color-mix(in srgb, var(--fresh) 14%, transparent); color: var(--ink); }

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePins } from '../lib/pins.js';
 import Icon from '../components/Icon.jsx';
 import { Avatar } from '../components/ContactCard.jsx';
@@ -7,6 +7,7 @@ import { useSettings } from '../hooks/useSettings.js';
 import { money } from '../lib/money.js';
 import { SaveError, errorText } from '../components/formBits.jsx';
 import RichTextArea from '../components/RichTextArea.jsx';
+import NoteDialog from '../components/NoteDialog.jsx';
 import { plainText } from '../lib/richText.jsx';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -38,7 +39,9 @@ export default function HomePage({ contacts, contracts, orgsById, contactsById, 
   const { pinned, togglePin } = usePins();
   const [customizing, setCustomizing] = useState(false);
   const [dragging, setDragging] = useState(null);
-  const [over, setOver] = useState(null); // card a dragged card would land before
+  const [over, setOver] = useState(null);
+  const [noteDialog, setNoteDialog] = useState(null); // contact getting a note in the pop-up
+  const [flash, setFlash] = useState(''); // card a dragged card would land before
   const [noteFor, setNoteFor] = useState('');
   const [text, setText] = useState('');
   const [saved, setSaved] = useState('');
@@ -69,12 +72,12 @@ export default function HomePage({ contacts, contracts, orgsById, contactsById, 
 
   const people = [...active].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
 
-  const startNote = (id) => {
-    setNoteFor(id);
-    setSaved('');
-    box.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    setTimeout(() => box.current?.querySelector('textarea')?.focus(), 50);
-  };
+  // The "Saved a note for …" message after the pop-up closes fades on its own.
+  useEffect(() => {
+    if (!flash) return;
+    const t = setTimeout(() => setFlash(''), 5000);
+    return () => clearTimeout(t);
+  }, [flash]);
 
   const save = async (e) => {
     e.preventDefault();
@@ -170,7 +173,7 @@ export default function HomePage({ contacts, contracts, orgsById, contactsById, 
                   </button>
                   <div className="call-actions">
                     {phone && <a className="btn-soft btn-sm" href={`tel:${phone}`}><Icon name="phone" size={14} /> Call</a>}
-                    <button className="btn-ghost btn-sm" onClick={() => startNote(c.id)}>Add note</button>
+                    <button className="btn-ghost btn-sm" onClick={() => setNoteDialog(c)}>Add note</button>
                   </div>
                 </li>
               );
@@ -205,7 +208,7 @@ export default function HomePage({ contacts, contracts, orgsById, contactsById, 
                   </button>
                   <div className="call-actions">
                     {phone && <a className="btn-soft btn-sm" href={`tel:${phone}`}><Icon name="phone" size={14} /> Call</a>}
-                    <button className="btn-ghost btn-sm" onClick={() => startNote(c.id)}>Add note</button>
+                    <button className="btn-ghost btn-sm" onClick={() => setNoteDialog(c)}>Add note</button>
                     <button className="icon-btn" onClick={() => togglePin(c.id)} aria-label={`Unpin ${c.firstName} ${c.lastName}`} title="Unpin">
                       <Icon name="close" size={14} />
                     </button>
@@ -448,6 +451,23 @@ export default function HomePage({ contacts, contracts, orgsById, contactsById, 
             </div>
           )}
         </div>
+      )}
+
+      {noteDialog && (
+        <NoteDialog
+          contact={noteDialog}
+          onSave={onAddNote}
+          onClose={(saved) => {
+            if (saved) setFlash(`Saved a note for ${noteDialog.firstName} ${noteDialog.lastName}.`);
+            setNoteDialog(null);
+          }}
+        />
+      )}
+      {flash && (
+        <p className="banner banner-ok" role="status">
+          {flash}{' '}
+          <button className="link-btn" onClick={() => setFlash('')}>Dismiss</button>
+        </p>
       )}
 
       {layout.main.length + layout.side.length === 0 && !customizing ? (

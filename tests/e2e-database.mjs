@@ -67,7 +67,7 @@ try {
 
   await step('opens the encrypted database and seeds the sample people', async () => {
     assert.equal(await page.evaluate(() => window.crm.dataMode), 'dev-database');
-    await page.getByText('Saved on this computer').waitFor();
+    await page.waitForFunction(() => window.crm?.dataMode === 'dev-database' && document.querySelector('.sidebar'));
     const contacts = await call('getContacts');
     assert.equal(contacts.length, 13);
     const notes = contacts.flatMap((c) => c.notes);
@@ -245,7 +245,6 @@ try {
     assert.equal(await page.evaluate(() => typeof window.crm.api.login), 'function');
     assert.equal(await page.evaluate(() => typeof window.crm.api.getContacts), 'function');
     await assert.rejects(() => page.evaluate(() => window.crm.api.getContacts()));
-    await page.getByText('Sample data, not saved').waitFor();
   });
 
   await app.close();

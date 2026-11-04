@@ -14,12 +14,10 @@ function AuthCard({ title, sub, children, footer }) {
   return (
     <main className="auth-screen">
       <div className="auth-card">
-        <div className="brand auth-brand">
-          <Logo size={36} />
-          <div>
-            <div className="brand-name">Auria</div>
-            <div className="brand-sub">Your Network. Secured.</div>
-          </div>
+        <div className="auth-brand">
+          <Logo size={72} />
+          <div className="auth-brand-name">Auria</div>
+          <div className="auth-brand-tag">Your Network. Secured.</div>
         </div>
         <h1>{title}</h1>
         {sub && <p className="auth-sub">{sub}</p>}

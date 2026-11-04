@@ -199,7 +199,7 @@ export default function ContactForm({ contact, organizations, contacts, onSave, 
   const initials = ((form.firstName[0] || '') + (form.lastName[0] || '')).toUpperCase() || '?';
 
   return (
-    <Drawer title={isEdit ? `Edit ${contact.firstName} ${contact.lastName}` : 'Add contact'} onRequestClose={requestClose} footer={footer}>
+    <Drawer title={isEdit ? `Edit ${contact.firstName} ${contact.lastName}` : 'Add contact'} onRequestClose={requestClose} footer={footer} onSubmit={step === 'edit' && !saving ? save : undefined}>
       <section className="form-section">
         <div className="form-grid">
           <div className="span-2">

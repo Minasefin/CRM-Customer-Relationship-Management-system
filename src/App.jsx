@@ -26,6 +26,29 @@ export default function App({ exploring = false, canLock = false }) {
   const [all, setAll] = useState({ organizations: [], contacts: [], contracts: [], employment: [] });
   const [loadError, setLoadError] = useState('');
   const [toast, setToast] = useState('');
+
+  // Sidebar: full or icons only. Remembered on this computer.
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('crm-sidebar-collapsed') === '1'; } catch { return false; }
+  });
+  const toggleCollapsed = useCallback(() => {
+    setCollapsed((c) => {
+      try { localStorage.setItem('crm-sidebar-collapsed', c ? '0' : '1'); } catch {}
+      return !c;
+    });
+  }, []);
+
+  // Keyboard: Cmd/Ctrl+B folds the sidebar, Cmd/Ctrl+L locks.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
+      const k = e.key.toLowerCase();
+      if (k === 'b') { e.preventDefault(); toggleCollapsed(); }
+      if (k === 'l' && canLock) { e.preventDefault(); window.crm.api.logout(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [toggleCollapsed, canLock]);
   const errorText = (e) => (e && (e.userMessage || e.message)) || 'Something went wrong. Try again.';
 
   const load = useCallback(
@@ -210,8 +233,18 @@ export default function App({ exploring = false, canLock = false }) {
     <SettingsContext.Provider value={settingsState}>
       <DataContext.Provider value={data}>
       <ActionsContext.Provider value={actions}>
-        <div className="app">
-          <Sidebar page={page} onNavigate={navigate} counts={counts} theme={theme} onToggleTheme={toggleTheme} dataMode={dataMode} canLock={canLock} />
+        <div className={'app' + (collapsed ? ' is-collapsed' : '')}>
+          <Sidebar
+            page={page}
+            onNavigate={navigate}
+            counts={counts}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            dataMode={dataMode}
+            canLock={canLock}
+            collapsed={collapsed}
+            onToggleCollapsed={toggleCollapsed}
+          />
           <main className="main">
             {exploring && (
               <p className="banner banner-warn" role="status">

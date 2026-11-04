@@ -53,6 +53,7 @@ export default function ContactsPage({ contacts, orgsById, onOpen, onAdd }) {
 
   return (
     <>
+      <div className="page-top">
       <header className="page-head">
         <div>
           <h1>Contacts</h1>
@@ -86,6 +87,7 @@ export default function ContactsPage({ contacts, orgsById, onOpen, onAdd }) {
           ))}
         </div>
         <SortSelect value={sort} onChange={setSort} options={contactSorts} />
+      </div>
       </div>
 
       {shown.length === 0 && alike.length === 0 ? (

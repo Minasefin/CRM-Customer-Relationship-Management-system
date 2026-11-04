@@ -3,7 +3,8 @@ import Icon from './Icon.jsx';
 
 // Panel that slides in from the right. onRequestClose lets the form decide
 // whether to warn about unsaved changes before actually closing.
-export default function Drawer({ title, onRequestClose, children, footer }) {
+// onSubmit: Enter in a one-line field (or Cmd/Ctrl+Enter anywhere) saves the form.
+export default function Drawer({ title, onRequestClose, children, footer, onSubmit }) {
   const panel = useRef(null);
   const close = useRef(onRequestClose);
   close.current = onRequestClose;
@@ -15,8 +16,18 @@ export default function Drawer({ title, onRequestClose, children, footer }) {
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
+  const onKeyDown = (e) => {
+    if (e.key !== 'Enter' || !onSubmit || e.defaultPrevented || e.isComposing) return;
+    const t = e.target;
+    const oneLine = t.tagName === 'INPUT' && !['button', 'checkbox', 'radio', 'file', 'submit'].includes(t.type);
+    if (oneLine || ((e.metaKey || e.ctrlKey) && t.tagName === 'TEXTAREA')) {
+      e.preventDefault();
+      onSubmit();
+    }
+  };
+
   return (
-    <div className="drawer-root">
+    <div className="drawer-root" onKeyDown={onKeyDown}>
       <div className="drawer-scrim" onClick={onRequestClose} />
       <aside className="drawer" role="dialog" aria-modal="true" aria-label={title} ref={panel}>
         <header className="drawer-head">

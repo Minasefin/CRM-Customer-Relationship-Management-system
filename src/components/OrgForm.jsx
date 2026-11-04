@@ -68,6 +68,7 @@ export default function OrgForm({ org, organizations, onSave, onClose }) {
     <Drawer
       title={org ? `Edit ${org.name}` : 'Add organization'}
       onRequestClose={requestClose}
+      onSubmit={leaving || saving ? undefined : save}
       footer={
         leaving ? (
           <DiscardBar onDiscard={onClose} onKeep={() => setLeaving(false)} />

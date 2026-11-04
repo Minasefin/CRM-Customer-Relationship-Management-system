@@ -65,6 +65,7 @@ export function OrganizationsPage({ organizations, contacts, contracts, employme
 
   return (
     <>
+      <div className="page-top">
       <header className="page-head">
         <div>
           <h1>Organizations</h1>
@@ -81,6 +82,7 @@ export function OrganizationsPage({ organizations, contacts, contracts, employme
       <div className="toolbar toolbar-end">
         <SortSelect value={sort} onChange={setSort} options={orgSorts} />
       </div>
+      </div>
       <div className="grid grid-wide">
         {shown.map((o) => <OrgCard key={o.id} org={o} data={data} onOpenOrg={onOpenOrg} />)}
       </div>
@@ -94,6 +96,7 @@ export function ContractsPage({ contracts, contactsById, orgsById, onAddContract
   const sorted = [...contracts].sort(contractSorts.find((o) => o.id === sort).fn);
   return (
     <>
+      <div className="page-top">
       <header className="page-head">
         <div>
           <h1>Contracts</h1>
@@ -105,6 +108,7 @@ export function ContractsPage({ contracts, contactsById, orgsById, onAddContract
       </header>
       <div className="toolbar toolbar-end">
         <SortSelect value={sort} onChange={setSort} options={contractSorts} />
+      </div>
       </div>
       {sorted.length === 0 ? (
         <div className="empty">

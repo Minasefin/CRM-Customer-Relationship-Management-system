@@ -7,6 +7,7 @@ import { formatDate } from '../lib/freshness.js';
 import { orgSorts, contractSorts } from '../lib/sorting.js';
 import { useActions } from '../lib/dataContext.js';
 import { money } from '../lib/money.js';
+import { plainText } from '../lib/richText.jsx';
 
 
 // Same ⋯ menu for a firm wherever it shows up. Nothing is ever deleted: archive hides, restore brings back.
@@ -143,7 +144,7 @@ export function ContractsPage({ contracts, contactsById, orgsById, onAddContract
                     <td>
                       {k.title}
                       <div className="muted small">{k.orgId ? orgsById[k.orgId]?.name : 'Independent'}</div>
-                      {k.notes && <div className="contract-notes clamp">{k.notes}</div>}
+                      {k.notes && <div className="contract-notes clamp">{plainText(k.notes)}</div>}
                     </td>
                     <td>{p ? `${p.firstName} ${p.lastName}` : '—'}</td>
                     <td>{k.location}</td>

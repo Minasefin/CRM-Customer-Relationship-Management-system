@@ -717,3 +717,28 @@ select:disabled { opacity: 0.7; cursor: not-allowed; }
   border: 1px solid var(--line); background: var(--surface); color: var(--ink);
 }
 .logo { flex: none; display: block; }
+
+/* Notes with bold, italic and lists */
+.rich-area { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius-ctl); background: var(--surface-2); }
+.rich-area:focus-within { border-color: var(--sky); box-shadow: 0 0 0 3px var(--sky-soft); }
+.rich-toolbar { display: flex; gap: 2px; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.rich-tool {
+  display: grid; place-items: center; min-width: 30px; height: 28px; padding: 0 6px;
+  border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 14px;
+}
+.rich-tool:hover { background: var(--sky-soft); color: var(--sky-strong); }
+.rich-area textarea,
+.note-form .rich-area textarea,
+.field .rich-area textarea {
+  border: 0 !important; box-shadow: none !important; background: transparent; outline: 0;
+  width: 100%; resize: vertical; padding: 10px 12px; line-height: 1.5; border-radius: 0 0 var(--radius-ctl) var(--radius-ctl);
+}
+.rich p { margin: 2px 0 0; }
+.rich p + p, .rich ul, .rich ol { margin-top: 6px; }
+.rich ul, .rich ol { margin-bottom: 0; padding-left: 20px; }
+.rich li + li { margin-top: 2px; }
+.rich strong { font-weight: 700; }
+/* Bullets inside a note shouldn't pick up the timeline's dots and line. */
+.timeline .rich li { position: static; padding: 0; margin-left: 0; border-left: 0; list-style: disc; }
+.timeline .rich ol li { list-style: decimal; }
+.timeline .rich li::before { content: none; display: none; }

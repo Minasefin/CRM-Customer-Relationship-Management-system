@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Drawer from './Drawer.jsx';
 import { DiscardBar, SaveError, errorText } from './formBits.jsx';
+import RichTextArea from './RichTextArea.jsx';
 
 const toDateInput = (iso) => (iso ? iso.slice(0, 10) : '');
 const fromDateInput = (d) => (d ? new Date(`${d}T12:00:00`).toISOString() : null);
@@ -131,15 +132,16 @@ export default function ContractForm({ contract, contactId, contacts, organizati
           <input type="date" value={form.end} onChange={set('end')} aria-invalid={!!errors.end} />
           {errors.end && <small className="field-error">{errors.end}</small>}
         </label>
-        <label className="field span-2">
-          <span>Notes</span>
-          <textarea
+        <div className="field span-2">
+          <label htmlFor="contract-notes" className="field-label">Notes</label>
+          <RichTextArea
+            id="contract-notes"
             rows={5}
             value={form.notes}
             onChange={set('notes')}
             placeholder="Terms, point of contact on site, payment schedule, anything worth remembering"
           />
-        </label>
+        </div>
       </div>
     </Drawer>
   );

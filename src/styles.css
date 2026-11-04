@@ -422,7 +422,7 @@ select, .days-input input {
   font-size: 12px; font-weight: 650; color: var(--muted); border: 1px solid var(--line);
 }
 .avail-pill.is-on { background: var(--sky-soft); color: var(--sky-strong); border-color: transparent; }
-.profile-id .avail-pill { margin: 0 0 8px; }
+.profile-id .avail-pill { margin: 0 14px 0 0; vertical-align: middle; } /* room before the status dot */
 
 /* Firm page */
 .org-logo-lg { width: 96px; height: 96px; border-radius: 24px; font-size: 28px; }

@@ -754,19 +754,23 @@ select:disabled { opacity: 0.7; cursor: not-allowed; }
 
 /* Customizable Home */
 .home-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
-.home-col.is-customizing { min-height: 120px; padding: 6px; margin: -6px; border-radius: calc(var(--radius-card) + 6px); outline: 2px dashed var(--line); outline-offset: -2px; }
+.home-col.is-customizing { min-height: 120px; padding: 18px 6px 6px; margin: -18px -6px -6px; gap: 30px; border-radius: calc(var(--radius-card) + 6px); outline: 2px dashed var(--line); outline-offset: -2px; }
 .widget { position: relative; border-radius: var(--radius-card); }
 .home-col.is-customizing .widget { cursor: grab; }
-.home-col.is-customizing .widget-body { opacity: 0.85; }
+.home-col.is-customizing .widget-body .panel { box-shadow: 0 0 0 2px var(--sky-soft), var(--shadow); }
+.home-col.is-customizing .widget:hover .widget-body .panel,
+.home-col.is-customizing .widget:focus-visible .widget-body .panel { box-shadow: 0 0 0 2px var(--sky), var(--shadow); }
+.widget:focus-visible { outline: none; }
 .widget.is-dragging { opacity: 0.4; }
-.widget-tools {
-  display: flex; align-items: center; gap: 2px; margin-bottom: 6px; padding: 6px 8px;
-  border: 1px solid var(--sky); border-radius: 12px; background: var(--sky-soft); color: var(--sky-strong);
+.widget.is-over::before {
+  content: ''; position: absolute; left: 8px; right: 8px; top: -12px; height: 4px; border-radius: 2px; background: var(--sky);
 }
-.widget-grip { display: grid; place-items: center; width: 22px; color: var(--sky-strong); }
-.widget-name { flex: 1; font-size: 13px; font-weight: 650; }
-.widget-tools .icon-btn { color: var(--sky-strong); }
-.widget-tools .icon-btn:disabled { opacity: 0.35; cursor: default; }
+.widget-hide {
+  position: absolute; top: -13px; right: 16px; z-index: 2; display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface);
+  color: var(--ink); font-size: 13px; font-weight: 600; box-shadow: var(--shadow);
+}
+.widget-hide:hover { border-color: var(--overdue); color: var(--overdue); }
 .widget-empty { margin: 0; padding: 30px 12px; text-align: center; color: var(--muted); font-size: 14px; }
 .customize-bar {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px;

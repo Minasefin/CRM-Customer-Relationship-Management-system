@@ -38,6 +38,7 @@ export default function HomePage({ contacts, contracts, orgsById, contactsById, 
   const { pinned, togglePin } = usePins();
   const [customizing, setCustomizing] = useState(false);
   const [dragging, setDragging] = useState(null);
+  const [over, setOver] = useState(null); // card a dragged card would land before
   const [noteFor, setNoteFor] = useState('');
   const [text, setText] = useState('');
   const [saved, setSaved] = useState('');
@@ -373,6 +374,7 @@ export default function HomePage({ contacts, contracts, orgsById, contactsById, 
     const id = e.dataTransfer.getData('text/plain') || dragging;
     if (HOME_CARDS[id]) moveTo(id, col, index);
     setDragging(null);
+    setOver(null);
   };
   const renderCol = (col) => (
     <div
@@ -383,24 +385,24 @@ export default function HomePage({ contacts, contracts, orgsById, contactsById, 
       {layout[col].map((id, i) => (
         <div
           key={id}
-          className={'widget' + (dragging === id ? ' is-dragging' : '')}
+          className={'widget' + (dragging === id ? ' is-dragging' : '') + (over === id && dragging !== id ? ' is-over' : '')}
           draggable={customizing}
+          tabIndex={customizing ? 0 : undefined}
+          aria-label={customizing ? `${HOME_CARDS[id].title}. Drag to move, or use the arrow keys.` : undefined}
+          onKeyDown={customizing ? (e) => {
+            const keys = { ArrowUp: () => move(id, -1), ArrowDown: () => move(id, 1), ArrowLeft: () => moveTo(id, 'main'), ArrowRight: () => moveTo(id, 'side') };
+            if (keys[e.key] && e.target === e.currentTarget) { e.preventDefault(); keys[e.key](); }
+          } : undefined}
+          onDragEnter={customizing ? () => setOver(id) : undefined}
           onDragStart={customizing ? (e) => { e.dataTransfer.setData('text/plain', id); e.dataTransfer.effectAllowed = 'move'; setDragging(id); } : undefined}
-          onDragEnd={() => setDragging(null)}
+          onDragEnd={() => { setDragging(null); setOver(null); }}
           onDragOver={customizing ? (e) => e.preventDefault() : undefined}
           onDrop={customizing ? dropOn(col, i) : undefined}
         >
           {customizing && (
-            <div className="widget-tools" role="group" aria-label={`Arrange ${HOME_CARDS[id].title}`}>
-              <span className="widget-grip" aria-hidden="true"><Icon name="grip" size={16} /></span>
-              <span className="widget-name">{HOME_CARDS[id].title}</span>
-              <button className="icon-btn" onClick={() => move(id, -1)} disabled={i === 0} aria-label={`Move ${HOME_CARDS[id].title} up`}><Icon name="up" size={15} /></button>
-              <button className="icon-btn" onClick={() => move(id, 1)} disabled={i === layout[col].length - 1} aria-label={`Move ${HOME_CARDS[id].title} down`}><Icon name="down" size={15} /></button>
-              <button className="icon-btn" onClick={() => moveTo(id, col === 'main' ? 'side' : 'main')} aria-label={`Move ${HOME_CARDS[id].title} to the ${col === 'main' ? 'right' : 'left'} column`}>
-                <Icon name={col === 'main' ? 'right' : 'left'} size={15} />
-              </button>
-              <button className="icon-btn" onClick={() => hide(id)} aria-label={`Hide ${HOME_CARDS[id].title}`} title="Hide"><Icon name="eyeOff" size={15} /></button>
-            </div>
+            <button className="widget-hide" onClick={() => hide(id)} aria-label={`Hide ${HOME_CARDS[id].title}`} title="Hide this card">
+              <Icon name="eyeOff" size={15} /> Hide
+            </button>
           )}
           <div className="widget-body" inert={customizing ? '' : undefined}>{cards[id]}</div>
         </div>
@@ -434,7 +436,7 @@ export default function HomePage({ contacts, contracts, orgsById, contactsById, 
 
       {customizing && (
         <div className="customize-bar">
-          <p>Drag cards to move them, or use the arrows. Hide what you don't need.</p>
+          <p>Drag cards to move them. Hide the ones you don't need.</p>
           {hidden.length > 0 && (
             <div className="customize-add">
               <span className="muted small">Add a card:</span>

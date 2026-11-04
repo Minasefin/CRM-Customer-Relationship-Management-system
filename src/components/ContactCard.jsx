@@ -3,6 +3,7 @@ import { useSettings } from '../hooks/useSettings.js';
 import { availability } from '../lib/availability.js';
 import { useData, useActions } from '../lib/dataContext.js';
 import MoreMenu from './MoreMenu.jsx';
+import { usePins } from '../lib/pins.js';
 
 const statusLabels = { active: 'Mark active', inactive: 'Mark left / inactive', deceased: 'Mark deceased' };
 
@@ -40,8 +41,10 @@ export default function ContactCard({ contact, org, onOpen }) {
   const avail = availability(contact, useData().contracts);
   const open = () => onOpen && onOpen(contact.id);
   const actions = useActions();
+  const { isPinned, togglePin } = usePins();
   const menu = [
     { label: 'Edit', onSelect: () => actions.editContact(contact.id) },
+    { label: isPinned(contact.id) ? 'Unpin from Home' : 'Pin to Home', onSelect: () => togglePin(contact.id) },
     ...['active', 'inactive', 'deceased']
       .filter((s) => s !== contact.status)
       .map((s) => ({ label: statusLabels[s], onSelect: () => actions.setContactStatus(contact, s) })),

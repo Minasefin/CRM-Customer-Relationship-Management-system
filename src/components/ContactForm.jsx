@@ -4,7 +4,7 @@ import ImagePicker from './ImagePicker.jsx';
 import TagInput from './TagInput.jsx';
 import Icon from './Icon.jsx';
 import { OrgFields } from './OrgForm.jsx';
-import { DiscardBar, sameName, SaveError, errorText } from './formBits.jsx';
+import { UnsavedDialog, sameName, SaveError, errorText } from './formBits.jsx';
 import { soundsLike } from '../lib/soundex.js';
 
 const NEW_ORG = '__new';
@@ -171,7 +171,7 @@ export default function ContactForm({ contact, organizations, contacts, onSave, 
 
   const footer =
     step === 'leaving' ? (
-      <DiscardBar onDiscard={onClose} onKeep={() => setStep('edit')} />
+      <UnsavedDialog onSave={() => { setStep('edit'); save(); }} onDiscard={onClose} onKeep={() => setStep('edit')} />
     ) : step === 'confirm-move' ? (
       <div className="discard-bar">
         <p>

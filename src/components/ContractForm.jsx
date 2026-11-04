@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Drawer from './Drawer.jsx';
-import { DiscardBar, SaveError, errorText } from './formBits.jsx';
+import { UnsavedDialog, SaveError, errorText } from './formBits.jsx';
 import RichTextArea from './RichTextArea.jsx';
 
 const toDateInput = (iso) => (iso ? iso.slice(0, 10) : '');
@@ -76,7 +76,7 @@ export default function ContractForm({ contract, contactId, contacts, organizati
       onSubmit={leaving || saving ? undefined : save}
       footer={
         leaving ? (
-          <DiscardBar onDiscard={onClose} onKeep={() => setLeaving(false)} />
+          <UnsavedDialog onSave={() => { setLeaving(false); save(); }} onDiscard={onClose} onKeep={() => setLeaving(false)} />
         ) : (
           <>
             <SaveError message={saveError} />

@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 // Small shared pieces for the forms.
 
 export const sameName = (a = '', b = '') => a.trim().toLowerCase() === b.trim().toLowerCase() && a.trim() !== '';
@@ -20,16 +22,34 @@ export function SaveError({ message }) {
   return <p className="save-error" role="alert">{message}</p>;
 }
 
-// Shown in a form's footer when someone closes it with unsaved changes.
-// Main action first, then the way out, same as every confirm in the app.
-export function DiscardBar({ onDiscard, onKeep }) {
-  return (
-    <div className="discard-bar">
-      <p>You have unsaved changes.</p>
-      <div className="btn-row">
-        <button className="btn-primary" onClick={onKeep}>Keep editing</button>
-        <button className="btn-ghost" onClick={onDiscard}>Discard changes</button>
+// Pop-up when someone closes a form with unsaved changes.
+// Main action first (Save), then Discard, then Keep editing, like every confirm in the app.
+// Escape or clicking outside = keep editing.
+export function UnsavedDialog({ onSave, onDiscard, onKeep }) {
+  const main = useRef(null);
+  useEffect(() => {
+    main.current?.focus();
+  }, []);
+  const onKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation(); // don't let the form's own Escape close it
+      onKeep();
+    }
+  };
+  // Rendered on top of everything (not inside the form panel), so nothing can cover it.
+  return createPortal(
+    <div className="dialog-root" onKeyDown={onKeyDown}>
+      <div className="drawer-scrim" onClick={onKeep} />
+      <div className="dialog dialog-wide" role="alertdialog" aria-modal="true" aria-labelledby="unsaved-title" aria-describedby="unsaved-text">
+        <h2 id="unsaved-title">Save your changes?</h2>
+        <p id="unsaved-text" className="muted">You changed this form but haven't saved it.</p>
+        <div className="btn-row">
+          <button ref={main} className="btn-primary" onClick={onSave}>Save changes</button>
+          <button className="btn-ghost" onClick={onDiscard}>Discard changes</button>
+          <button className="btn-ghost" onClick={onKeep}>Keep editing</button>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -43,7 +43,8 @@ export default function App({ exploring = false, canLock = false }) {
     const onKey = (e) => {
       if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
       const k = e.key.toLowerCase();
-      if (k === 'b') { e.preventDefault(); toggleCollapsed(); }
+      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
+      if (k === 'b' && !typing) { e.preventDefault(); toggleCollapsed(); }
       if (k === 'l' && canLock) { e.preventDefault(); window.crm.api.logout(); }
     };
     window.addEventListener('keydown', onKey);

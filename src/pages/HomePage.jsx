@@ -5,6 +5,8 @@ import { freshness, formatDate, relativeDays, daysSince } from '../lib/freshness
 import { useSettings } from '../hooks/useSettings.js';
 import { money } from '../lib/money.js';
 import { SaveError, errorText } from '../components/formBits.jsx';
+import RichTextArea from '../components/RichTextArea.jsx';
+import { plainText } from '../lib/richText.jsx';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -127,7 +129,7 @@ export default function HomePage({ contacts, contracts, orgsById, contactsById, 
                   ))}
                 </select>
               </label>
-              <textarea
+              <RichTextArea
                 rows={3}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
@@ -184,7 +186,7 @@ export default function HomePage({ contacts, contracts, orgsById, contactsById, 
                   <li key={n.id} className="note-row">
                     <button className="link-btn" onClick={() => onOpen(n.c.id)}>{n.c.firstName} {n.c.lastName}</button>
                     <span className="muted small">{daysSince(n.at) === 0 ? 'Today' : formatDate(n.at)}</span>
-                    <p className="note-text">{n.text}</p>
+                    <p className="note-text">{plainText(n.text)}</p>
                   </li>
                 ))}
               </ul>

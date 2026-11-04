@@ -7,6 +7,8 @@ import { api } from '../api/index.js';
 import { money } from '../lib/money.js';
 import { SaveError, errorText } from '../components/formBits.jsx';
 import { useActions } from '../lib/dataContext.js';
+import RichTextArea from '../components/RichTextArea.jsx';
+import { RichText, plainText } from '../lib/richText.jsx';
 
 const formatDateTime = (iso) =>
   new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -49,7 +51,7 @@ function NoteItem({ note, onUpdate }) {
       </div>
       {editing ? (
         <div className="note-form note-edit-form">
-          <textarea
+          <RichTextArea
             value={text}
             rows={3}
             autoFocus
@@ -69,7 +71,7 @@ function NoteItem({ note, onUpdate }) {
           </div>
         </div>
       ) : (
-        <p>{note.text}</p>
+        <RichText text={note.text} />
       )}
     </li>
   );
@@ -166,7 +168,7 @@ export default function ContactProfile({ contact, org, orgsById, contracts, onBa
         <section className="panel notes-panel">
           <h2>Notes</h2>
           <form className="note-form" onSubmit={saveNote}>
-            <textarea
+            <RichTextArea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               placeholder={`What did you and ${contact.firstName} talk about?`}
@@ -288,7 +290,7 @@ export default function ContactProfile({ contact, org, orgsById, contracts, onBa
                       <div className="contract-title">{k.title}</div>
                       <div className="muted small">{[k.location, k.value != null && money(k.value)].filter(Boolean).join(', ')}</div>
                       <span className={`status-pill status-${k.status}`}>{k.status === 'active' ? 'On contract' : 'Completed'}</span>
-                      {k.notes && <p className="contract-notes">{k.notes}</p>}
+                      {k.notes && <span className="contract-notes">{plainText(k.notes)}</span>}
                     </button>
                   </li>
                 ))}

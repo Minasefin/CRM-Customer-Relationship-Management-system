@@ -196,7 +196,7 @@ export function ArchivedPage({ contacts, organizations, contracts, employment, a
       <section className="org-section">
         <h2>Organizations</h2>
         {archivedOrgs.length === 0 ? (
-          <p className="muted">No archived organizations. Use Archive in a firm's ⋯ menu to hide it from your lists.</p>
+          <p className="muted">No archived organizations.</p>
         ) : (
           <div className="grid grid-wide">
             {archivedOrgs.map((o) => <OrgCard key={o.id} org={o} data={data} onOpenOrg={onOpenOrg} />)}
@@ -207,7 +207,7 @@ export function ArchivedPage({ contacts, organizations, contracts, employment, a
       <section className="org-section">
         <h2>Contracts</h2>
         {archivedContracts.length === 0 ? (
-          <p className="muted">No archived contracts. Use Archive in a contract's ⋯ menu to hide it.</p>
+          <p className="muted">No archived contracts.</p>
         ) : (
           <div className="table-wrap">
             <table className="table">

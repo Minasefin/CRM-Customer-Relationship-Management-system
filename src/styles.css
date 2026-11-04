@@ -852,3 +852,17 @@ select:disabled { opacity: 0.7; cursor: not-allowed; }
 .settings-group { margin-left: auto; margin-right: auto; }
 .settings-head > div { width: 100%; max-width: 720px; margin: 0 auto; }
 .more-menu.is-floating { position: fixed; right: auto; z-index: 70; }
+
+/* Forms (add/edit contact, firm, contract) open as a centered pop-up, like the other
+   pop-ups, instead of a panel sliding in from the side. */
+.drawer-root { display: grid; place-items: center; padding: 28px 20px; }
+.drawer {
+  position: relative; top: auto; right: auto; bottom: auto;
+  width: min(720px, 100%); max-height: min(880px, calc(100vh - 56px));
+  border: 1px solid var(--line); border-radius: 20px; overflow: hidden;
+  box-shadow: 0 24px 70px rgba(15, 22, 32, 0.28);
+  animation: pop 0.18s ease;
+}
+.drawer-head { padding: 22px 26px 12px; }
+.drawer-body { padding: 4px 26px 26px; }
+.drawer-foot { padding: 16px 26px; }

@@ -6,6 +6,7 @@ import { useSettings } from '../hooks/useSettings.js';
 import { api } from '../api/index.js';
 import { money } from '../lib/money.js';
 import { SaveError, errorText } from '../components/formBits.jsx';
+import { useActions } from '../lib/dataContext.js';
 
 const formatDateTime = (iso) =>
   new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -77,13 +78,12 @@ function NoteItem({ note, onUpdate }) {
 const statusLabel = { active: 'Active', inactive: 'Left / inactive', deceased: 'Deceased' };
 const socialLabel = { x: 'X', instagram: 'Instagram', snapchat: 'Snapchat', facebook: 'Facebook' };
 
-export default function ContactProfile({ contact, org, orgsById, contracts, onBack, onEdit, onAddNote, onUpdateNote, onSetStatus, onAddContract, onEditContract, onOpenOrg }) {
+export default function ContactProfile({ contact, org, orgsById, contracts, onBack, onEdit, onAddNote, onUpdateNote, onAddContract, onEditContract, onOpenOrg }) {
   const [settings] = useSettings();
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
   const [noteError, setNoteError] = useState('');
-  const [statusError, setStatusError] = useState('');
-  const [confirm, setConfirm] = useState(null); // status waiting for confirmation
+  const actions = useActions(); // status changes confirm in the shared pop-up
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
@@ -115,15 +115,6 @@ export default function ContactProfile({ contact, org, orgsById, contracts, onBa
     setSaving(false);
   };
 
-  const changeStatus = async (status) => {
-    setStatusError('');
-    try {
-      await onSetStatus(contact.id, status);
-      setConfirm(null);
-    } catch (err) {
-      setStatusError(errorText(err));
-    }
-  };
 
   return (
     <div className="profile">
@@ -327,28 +318,15 @@ export default function ContactProfile({ contact, org, orgsById, contracts, onBa
           <section className="panel">
             <h2>Status</h2>
             <p className="muted small">Records are never deleted. Archived people move to the Archived page.</p>
-            {confirm ? (
-              <div className="confirm">
-                <p>
-                  Mark {contact.firstName} as <strong>{statusLabel[confirm].toLowerCase()}</strong>?
-                </p>
-                <div className="btn-row">
-                  <button className="btn-primary" onClick={() => changeStatus(confirm)}>Yes, mark {statusLabel[confirm].toLowerCase()}</button>
-                  <button className="btn-ghost" onClick={() => setConfirm(null)}>Cancel</button>
-                </div>
-                <SaveError message={statusError} />
-              </div>
-            ) : (
-              <div className="btn-row status-actions">
-                {['active', 'inactive', 'deceased']
-                  .filter((s) => s !== contact.status)
-                  .map((s) => (
-                    <button key={s} className="btn-ghost" onClick={() => setConfirm(s)}>
-                      Mark {statusLabel[s].toLowerCase()}
-                    </button>
-                  ))}
-              </div>
-            )}
+            <div className="btn-row status-actions">
+              {['active', 'inactive', 'deceased']
+                .filter((s) => s !== contact.status)
+                .map((s) => (
+                  <button key={s} className="btn-ghost" onClick={() => actions.setContactStatus(contact, s)}>
+                    Mark {statusLabel[s].toLowerCase()}
+                  </button>
+                ))}
+            </div>
           </section>
         </aside>
       </div>

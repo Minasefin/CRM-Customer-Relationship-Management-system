@@ -72,6 +72,7 @@ export default function ContractForm({ contract, contactId, contacts, organizati
     <Drawer
       title={contract ? `Edit ${contract.title}` : 'Add contract'}
       onRequestClose={requestClose}
+      onSubmit={leaving || saving ? undefined : save}
       footer={
         leaving ? (
           <DiscardBar onDiscard={onClose} onKeep={() => setLeaving(false)} />

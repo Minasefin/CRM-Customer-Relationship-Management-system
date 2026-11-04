@@ -8,7 +8,7 @@ import { useActions } from '../lib/dataContext.js';
 import { money } from '../lib/money.js';
 
 
-// Everyone at one firm: current people, people who used to work there, and its contracts.
+// Everyone at one firm: current employees, previous employees, and its contracts.
 export default function OrgPage({ org, contacts, contactsById, contracts, employment, onBack, onEdit, onOpen, onEditContract }) {
   const actions = useActions();
   if (!org) return null;
@@ -39,8 +39,8 @@ export default function OrgPage({ org, contacts, contactsById, contracts, employ
           <h1>{org.name}</h1>
           <p className="profile-role">{place || 'No location yet'}</p>
           <p className="muted small">
-            {current.length} active {current.length === 1 ? 'contact' : 'contacts'}
-            {former.length + archivedHere.length > 0 && `, ${former.length + archivedHere.length} who used to work here`}
+            {current.length} current {current.length === 1 ? 'employee' : 'employees'}
+            {former.length + archivedHere.length > 0 && `, ${former.length + archivedHere.length} previous`}
           </p>
         </div>
         <div className="quick-actions">
@@ -56,7 +56,7 @@ export default function OrgPage({ org, contacts, contactsById, contracts, employ
       )}
 
       <section className="org-section">
-        <h2>People here now</h2>
+        <h2>Current employees</h2>
         {current.length === 0 ? (
           <p className="muted">Nobody active at {org.name} right now.</p>
         ) : (
@@ -68,7 +68,7 @@ export default function OrgPage({ org, contacts, contactsById, contracts, employ
 
       {(former.length > 0 || archivedHere.length > 0) && (
         <section className="org-section">
-          <h2>Used to work here</h2>
+          <h2>Previous employees</h2>
           <div className="panel">
             <ul className="people-list">
               {former.map((e) => {

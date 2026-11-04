@@ -3,6 +3,37 @@ import BarChart from '../components/BarChart.jsx';
 import { periods, allCheckins, compare, buckets, moves, pctChange } from '../lib/stats.js';
 import { lastContacted, daysSince, formatDate } from '../lib/freshness.js';
 
+// A statistics card whose body can be folded away. The choice is remembered per card.
+const FOLD_KEY = 'crm-stats-folded';
+function readFolded() {
+  try { return JSON.parse(localStorage.getItem(FOLD_KEY)) || {}; } catch { return {}; }
+}
+function StatPanel({ id, title, extra, children }) {
+  const [open, setOpen] = useState(() => !readFolded()[id]);
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    try { localStorage.setItem(FOLD_KEY, JSON.stringify({ ...readFolded(), [id]: !next })); } catch {}
+  };
+  const bodyId = `stat-${id}`;
+  return (
+    <section className={'panel stat-panel' + (open ? '' : ' is-folded')}>
+      <div className="panel-head">
+        <h2>
+          <button className="fold-btn" onClick={toggle} aria-expanded={open} aria-controls={bodyId}>
+            <svg className="fold-chevron" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {title}
+          </button>
+        </h2>
+        {open && extra}
+      </div>
+      {open && <div id={bodyId}>{children}</div>}
+    </section>
+  );
+}
+
 function Change({ now, before, unit, previous }) {
   const pct = pctChange(now, before);
   if (pct === null) return <p className="tile-change">New this period, none in {previous}</p>;
@@ -85,11 +116,11 @@ export default function StatsPage({ contacts, orgsById, employment, onOpen }) {
         </div>
       </div>
 
-      <section className="panel stat-panel">
-        <div className="panel-head">
-          <h2>Check-ins per {barUnit}, {period.label.toLowerCase()}</h2>
-          <button className="link-btn" onClick={() => setShowTable(!showTable)}>{showTable ? 'Show chart' : 'Show as table'}</button>
-        </div>
+      <StatPanel
+        id="checkins"
+        title={`Check-ins per ${barUnit}, ${period.label.toLowerCase()}`}
+        extra={<button className="link-btn" onClick={() => setShowTable(!showTable)}>{showTable ? 'Show chart' : 'Show as table'}</button>}
+      >
         {showTable ? (
           <div className="table-wrap flat">
             <table className="table">
@@ -104,17 +135,19 @@ export default function StatsPage({ contacts, orgsById, employment, onOpen }) {
         ) : (
           <BarChart data={bars} reference={prevPerBar} referenceLabel={`Average in ${period.previous}: ${prevPerBar.toFixed(1)} per ${barUnit}`} />
         )}
-      </section>
+      </StatPanel>
 
       <div className="stat-columns">
-        <section className="panel stat-panel">
-          <div className="panel-head">
-            <h2>Not contacted in</h2>
+        <StatPanel
+          id="quiet"
+          title="Not contacted in"
+          extra={
             <label className="days-input">
               <input type="number" min="1" value={quietDays} onChange={(e) => setQuietDays(Math.max(1, Number(e.target.value) || 1))} aria-label="Days" />
               <span className="muted">days</span>
             </label>
-          </div>
+          }
+        >
           {quiet.length === 0 ? (
             <p className="muted">Everyone's been contacted in the last {quietDays} days.</p>
           ) : (
@@ -132,12 +165,9 @@ export default function StatsPage({ contacts, orgsById, employment, onOpen }) {
               </ul>
             </>
           )}
-        </section>
+        </StatPanel>
 
-        <section className="panel stat-panel">
-          <div className="panel-head">
-            <h2>Moves between firms</h2>
-          </div>
+        <StatPanel id="moves" title="Moves between firms">
           {flows.length === 0 ? (
             <p className="muted">No one has moved between firms yet. Moves show up here when you change someone's organization.</p>
           ) : (
@@ -158,7 +188,7 @@ export default function StatsPage({ contacts, orgsById, employment, onOpen }) {
               </ul>
             </>
           )}
-        </section>
+        </StatPanel>
       </div>
     </>
   );

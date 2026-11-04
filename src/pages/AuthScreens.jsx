@@ -3,6 +3,7 @@
 // with the unlocked data, so these screens never hold contact data.
 import { useEffect, useState } from 'react';
 import PasswordField, { passwordLength } from '../components/PasswordField.jsx';
+import Logo from '../components/Logo.jsx';
 
 const MIN = 15;
 const MAX = 128;
@@ -14,7 +15,7 @@ function AuthCard({ title, sub, children, footer }) {
     <main className="auth-screen">
       <div className="auth-card">
         <div className="brand auth-brand">
-          <div className="brand-mark" aria-hidden="true">C</div>
+          <Logo size={36} />
           <div className="brand-name">Contractor CRM</div>
         </div>
         <h1>{title}</h1>

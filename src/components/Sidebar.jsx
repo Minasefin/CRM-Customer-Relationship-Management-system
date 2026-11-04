@@ -1,4 +1,5 @@
 import Icon from './Icon.jsx';
+import Logo from './Logo.jsx';
 
 const main = [
   { id: 'home', label: 'Home', icon: 'home' },
@@ -32,7 +33,7 @@ export default function Sidebar({ page, onNavigate, counts, theme, onToggleTheme
   return (
     <aside className={'sidebar' + (collapsed ? ' is-collapsed' : '')}>
       <div className="brand">
-        <div className="brand-mark" aria-hidden="true">C</div>
+        <Logo size={36} />
         <div className="brand-text">
           <div className="brand-name">Contractor CRM</div>
           <div className={'brand-sub' + (dataMode === 'database' ? '' : ' is-sample')}>

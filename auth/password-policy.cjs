@@ -7,6 +7,7 @@ const blocked = new Set(fs.readFileSync(path.join(__dirname, 'blocked-passwords.
 // Public, predictable phrases, not credentials. Compare entire passwords only.
 const contextual = new Set([
   'contractor crm', 'contractor crm password', 'contractorcrmpassword',
+  'auria password', 'auriapassword', 'my auria password', 'your network secured',
   'this is my password', 'thisismypassword', 'correct horse battery staple',
   'correcthorsebatterystaple', 'passwordpassword', 'passwordpasswordpassword',
   '123456789012345', '1234567890123456', 'qwertyuiopasdfgh',

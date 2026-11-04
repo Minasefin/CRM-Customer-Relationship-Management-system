@@ -16,7 +16,10 @@ function AuthCard({ title, sub, children, footer }) {
       <div className="auth-card">
         <div className="brand auth-brand">
           <Logo size={36} />
-          <div className="brand-name">Contractor CRM</div>
+          <div>
+            <div className="brand-name">Auria</div>
+            <div className="brand-sub">Your Network. Secured.</div>
+          </div>
         </div>
         <h1>{title}</h1>
         {sub && <p className="auth-sub">{sub}</p>}

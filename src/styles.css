@@ -879,3 +879,16 @@ select:disabled { opacity: 0.7; cursor: not-allowed; }
   border: 1px solid color-mix(in srgb, var(--line) 70%, #fff 30%);
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
 }
+
+/* Notes box with live formatting (bold, italic, lists show as you type) */
+.rich-editor { position: relative;
+  padding: 10px 12px; line-height: 1.5; color: var(--ink); outline: 0; overflow-wrap: anywhere;
+  max-height: 340px; overflow-y: auto; cursor: text;
+}
+.rich-editor.is-empty::before { content: attr(data-placeholder); color: var(--muted); opacity: 0.8; pointer-events: none; position: absolute; }
+.rich-editor div, .rich-editor p { margin: 0; }
+.rich-editor ul, .rich-editor ol { margin: 2px 0; padding-left: 22px; }
+.rich-editor b, .rich-editor strong { font-weight: 700; }
+.rich-tool.is-on { background: var(--sky-soft); color: var(--sky-strong); }
+.timeline .rich-editor li { position: static; padding: 0; margin-left: 0; border-left: 0; list-style: disc; }
+.timeline .rich-editor li::before { content: none; display: none; }

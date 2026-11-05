@@ -136,6 +136,7 @@ export default function ContractForm({ contract, contactId, contacts, organizati
           <label htmlFor="contract-notes" className="field-label">Notes</label>
           <RichTextArea
             id="contract-notes"
+            aria-label="Contract notes"
             rows={5}
             value={form.notes}
             onChange={set('notes')}

@@ -121,7 +121,7 @@ try {
     await page.waitForTimeout(1100); // so a changed date would be visible
     await page.locator('.timeline li').first().hover();
     await page.getByRole('button', { name: /^Edit note from/ }).first().click();
-    const box = page.locator('.note-edit-form textarea');
+    const box = page.locator('.note-edit-form [contenteditable]');
     await box.fill('First call about the Erbil job. He is interested.');
     await page.locator('.note-edit-form').getByRole('button', { name: 'Save' }).click();
     await page.locator('.timeline').getByText('He is interested.').waitFor();

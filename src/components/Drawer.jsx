@@ -32,7 +32,7 @@ export default function Drawer({ title, onRequestClose, children, footer, onSubm
     const t = e.target;
     const oneLine = t.tagName === 'INPUT' && !['button', 'checkbox', 'radio', 'file', 'submit'].includes(t.type);
     const shortcut = e.metaKey || e.ctrlKey;
-    if (!oneLine && !(shortcut && t.tagName === 'TEXTAREA')) return;
+    if (!oneLine && !(shortcut && (t.tagName === 'TEXTAREA' || t.isContentEditable))) return;
     e.preventDefault();
     const c = confirmed.current;
     if (shortcut || (c && c.el === t && c.value === t.value)) {

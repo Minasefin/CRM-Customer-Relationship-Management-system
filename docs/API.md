@@ -10,9 +10,33 @@ All functions are async and return plain objects. Dates are ISO strings (`2026-1
 | --- | --- | --- |
 | `isSetUp()` | `boolean` | False on first launch, so the UI shows "create a password" |
 | `setUpPassword(password)` | `{ ok }` | First launch only. Also creates the encrypted database. |
-| `login(password)` | `{ ok, error? }` | Unlocks the database for this session |
+| `login(password)` | `{ ok, error? }` | Unlocks the database for this session only if TOTP is disabled; otherwise returns `{ ok: false, error }` |
 | `logout()` | `{ ok }` | Locks the database; UI returns to the login screen |
 | `changePassword(oldPassword, newPassword)` | `{ ok, error? }` | Re-keys the database |
+
+### Optional authenticator enrollment (approved backend extension)
+
+| Function | Returns | Notes |
+| --- | --- | --- |
+| `getTotpStatus()` | `{ enabled }` | Available while locked; rejects safely on corrupt metadata. |
+| `beginTotpSetup(password)` | `{ ok, secret?, otpauthUri?, error? }` | Requires an unlocked session and current password. Starts/replaces a five-minute enrollment. Refuses if already enabled. |
+| `confirmTotpSetup(code)` | `{ ok, recoveryCodes?, error? }` | Requires the same unlocked session and a valid six-digit code. Enables TOTP and returns ten recovery codes **once**. |
+| `loginWithTotp(password, code)` | `{ ok, error? }` | Accepts a six-digit authenticator code or one unused recovery code. Requires both factors when enrolled; behaves like login when not enrolled. |
+| `disableTotp(password, code)` | `{ ok, error? }` | Requires an unlocked session, current password, and a fresh authenticator or unused recovery code. Invalidates the enrollment and its recovery codes. |
+
+Enrollment is optional; after confirmation every login requires both factors.
+All codes are strings (preserve leading zeroes). Recovery codes are exactly 32
+lowercase hexadecimal characters. They replace only the second factor, never the
+password. `changePassword` still requires an unlocked session and the current
+password, preserves TOTP/recovery state, and cancels pending enrollment.
+
+The UI should call `getTotpStatus()` to choose `login` or `loginWithTotp`. Only a
+successful login reloads the renderer. Use `otpauthUri` to render a QR code locally,
+or show `secret` for manual entry; never use an online QR service. Clear enrollment
+secrets after confirmation/cancellation. Show recovery codes once with instructions
+to save them privately outside the app. Logout cancels pending enrollment. If the
+phone is lost, sign in with password + recovery code, then disable with another
+unused recovery code and enroll a replacement phone. No password-only reset exists.
 
 ## Organizations (Adrian)
 

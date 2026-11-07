@@ -6,6 +6,8 @@ const { promisify } = require('node:util');
 const { performance } = require('node:perf_hooks');
 const { normalize, validateNewPassword } = require('./password-policy.cjs');
 
+const totp = require('./totp.cjs');
+
 const scryptAsync = promisify(scrypt);
 const IDLE_MS = 15 * 60 * 1000;
 const GENERIC_ERROR = 'Authentication could not be completed. Try again. If this continues, restore a matching database and authentication backup.';
@@ -51,14 +53,17 @@ function atomicWrite(filename, state) {
 }
 
 function validCredential(value) {
-  return value && typeof value === 'object' && /^[a-f0-9]{32}$/.test(value.salt) && /^[a-f0-9]{64}$/.test(value.check);
+  return value && typeof value === 'object' && /^[a-f0-9]{32}$/.test(value.salt) && /^[a-f0-9]{64}$/.test(value.check) &&
+    (value.totp === undefined || totp.validEnvelope(value.totp));
 }
 function validateState(state) {
-  if (!state || state.version !== 1 || !Number.isInteger(state.failures) || state.failures < 0 || state.failures > 100 ||
+  if (!state || ![1, 2].includes(state.version) || !Number.isInteger(state.failures) || state.failures < 0 || state.failures > 100 ||
       !Number.isSafeInteger(state.nextAllowedAt) || state.nextAllowedAt < 0) throw new Error('Invalid auth metadata');
   const stable = state.operation === null && validCredential(state.current) && state.pending === null;
   const setup = state.operation === 'setup' && state.current === null && validCredential(state.pending);
   const change = state.operation === 'change' && validCredential(state.current) && validCredential(state.pending);
+  if (state.version === 1 && (state.current?.totp || state.pending?.totp)) throw new Error('Invalid auth version');
+  if (state.version === 2 && (!state.current?.totp || (state.pending && !state.pending.totp))) throw new Error('Missing second factor');
   if (!stable && !setup && !change) throw new Error('Invalid auth metadata');
   return state;
 }
@@ -71,18 +76,27 @@ function createAuth({ database, directory, databaseFile = path.join(directory, '
   let epoch = 0;
   let unlocked = false;
   let lastActivity = 0;
+  let enrollment = null;
+  function clearEnrollment() {
+    if (enrollment) { enrollment.material.fill(0); enrollment.secret.fill(0); enrollment = null; }
+  }
+  function requireSession() {
+    checkInactivity();
+    if (!unlocked || !database.isOpen()) throw safeError('Sign in first.');
+  }
 
   function readState() {
     if (!fs.existsSync(filename)) {
       if (fs.existsSync(databaseFile)) throw new Error('Database exists without authentication metadata');
       return null;
     }
-    if (fs.statSync(filename).size > 4096) throw new Error('Invalid auth metadata');
+    if (fs.statSync(filename).size > 16384) throw new Error('Invalid auth metadata');
     return validateState(JSON.parse(fs.readFileSync(filename, 'utf8')));
   }
   function save(state) { writeState(filename, validateState(state)); }
   function lock() {
     epoch++;
+    clearEnrollment();
     const wasUnlocked = unlocked;
     unlocked = false;
     try { database.closeDatabase(); }
@@ -90,6 +104,7 @@ function createAuth({ database, directory, databaseFile = path.join(directory, '
     return { ok: true };
   }
   function checkInactivity() {
+    if (enrollment && monotonicNow() >= enrollment.expires) clearEnrollment();
     if (unlocked && monotonicNow() - lastActivity >= IDLE_MS) lock();
   }
   function activity() {
@@ -110,7 +125,7 @@ function createAuth({ database, directory, databaseFile = path.join(directory, '
     save(state); // persists across restarts, including termination during scrypt
   }
   function stable(credential) {
-    return { version: 1, current: credential, pending: null, operation: null, failures: 0, nextAllowedAt: 0 };
+    return { version: credential.totp ? 2 : 1, current: credential, pending: null, operation: null, failures: 0, nextAllowedAt: 0 };
   }
   async function withOperation(fn, rejectOnError = false) {
     if (busy) {
@@ -158,7 +173,8 @@ function createAuth({ database, directory, databaseFile = path.join(directory, '
         } finally { material.fill(0); }
       }, true);
     },
-    login(value) {
+    login(value) { return api.loginWithTotp(value); },
+    loginWithTotp(value, code) {
       return withOperation(async start => {
         if (unlocked) throw safeError('The database is already unlocked.');
         const state = readState();
@@ -172,6 +188,13 @@ function createAuth({ database, directory, databaseFile = path.join(directory, '
           try {
             assertEpoch(start);
             if (!matches(material, credential)) continue;
+            if (credential.totp) {
+              const payload = totp.unseal(credential.totp, material);
+              if (!totp.consume(payload, code, now())) throw safeError('A valid authenticator or recovery code is required.');
+              credential.totp = totp.seal(payload, material);
+              // Consume BEFORE database open: a failed write must never unlock.
+              save(state);
+            }
             if (state.operation !== 'setup' && !fs.existsSync(databaseFile)) throw new Error('Missing database');
             try { database.openDatabase(material.subarray(0, 32)); }
             catch {
@@ -188,6 +211,75 @@ function createAuth({ database, directory, databaseFile = path.join(directory, '
         throw safeError('Incorrect password.');
       });
     },
+    async getTotpStatus() {
+      try {
+        const state = readState();
+        return { enabled: Boolean(state?.current?.totp || state?.pending?.totp) };
+      } catch { throw safeError(GENERIC_ERROR); }
+    },
+    beginTotpSetup(value) {
+      return withOperation(async start => {
+        requireSession();
+        clearEnrollment();
+        const state = readState();
+        if (!state || state.operation !== null) throw new Error('Unresolved authentication state');
+        if (state.current.totp) throw safeError('Authenticator is already enabled.');
+        reserveAttempt(state);
+        const material = await deriveKey(existingPassword(value), state.current.salt);
+        try {
+          assertEpoch(start); requireSession();
+          if (!matches(material, state.current)) throw safeError('Incorrect password.');
+          save(stable(state.current));
+          const secret = randomBytes(20);
+          enrollment = { secret, material: Buffer.from(material), credential: state.current,
+            expires: monotonicNow() + 5 * 60 * 1000 };
+          const encoded = totp.base32(secret);
+          return { ok: true, secret: encoded,
+            otpauthUri: `otpauth://totp/Auria:Local%20account?secret=${encoded}&issuer=Auria&algorithm=SHA1&digits=6&period=30` };
+        } finally { material.fill(0); }
+      });
+    },
+    confirmTotpSetup(code) {
+      return withOperation(async () => {
+        requireSession();
+        if (!enrollment || monotonicNow() >= enrollment.expires) {
+          clearEnrollment(); throw safeError('Authenticator setup expired. Start again.');
+        }
+        const state = readState();
+        if (!state || state.operation !== null || state.current.totp || state.current.check !== enrollment.credential.check) {
+          clearEnrollment(); throw new Error('Enrollment state changed');
+        }
+        reserveAttempt(state);
+        const step = totp.matchStep(enrollment.secret, code, now());
+        if (step === null) throw safeError('Incorrect authenticator code.');
+        const recoveryCodes = Array.from({ length: 10 }, () => randomBytes(16).toString('hex'));
+        state.current.totp = totp.seal({ secret: enrollment.secret.toString('hex'), lastStep: step,
+          recovery: recoveryCodes.map(totp.hashRecovery) }, enrollment.material);
+        try { save(stable(state.current)); }
+        catch (err) { lock(); throw err; }
+        clearEnrollment();
+        return { ok: true, recoveryCodes };
+      });
+    },
+    disableTotp(value, code) {
+      return withOperation(async start => {
+        requireSession();
+        const state = readState();
+        if (!state || state.operation !== null) throw new Error('Unresolved authentication state');
+        if (!state.current.totp) throw safeError('Authenticator is not enabled.');
+        reserveAttempt(state);
+        const material = await deriveKey(existingPassword(value), state.current.salt);
+        try {
+          assertEpoch(start); requireSession();
+          if (!matches(material, state.current)) throw safeError('Incorrect password.');
+          const payload = totp.unseal(state.current.totp, material);
+          if (!totp.consume(payload, code, now())) throw safeError('A valid authenticator or recovery code is required.');
+          delete state.current.totp;
+          try { save(stable(state.current)); } catch (err) { lock(); throw err; }
+          clearEnrollment(); return { ok: true };
+        } finally { material.fill(0); }
+      });
+    },
     async logout() {
       try { return lock(); } catch { throw safeError(GENERIC_ERROR); }
     },
@@ -199,10 +291,13 @@ function createAuth({ database, directory, databaseFile = path.join(directory, '
         const state = readState();
         if (!state || state.operation !== null) throw new Error('Unresolved authentication state');
         reserveAttempt(state);
+        let factor;
         const oldMaterial = await deriveKey(existingPassword(oldValue), state.current.salt);
         try {
           assertEpoch(start);
           if (!matches(oldMaterial, state.current)) throw safeError('Incorrect password.');
+          if (state.current.totp) factor = totp.unseal(state.current.totp, oldMaterial);
+          clearEnrollment();
         } finally { oldMaterial.fill(0); }
         if (password === existingPassword(oldValue)) {
           save(stable(state.current));
@@ -214,6 +309,7 @@ function createAuth({ database, directory, databaseFile = path.join(directory, '
         try {
           assertEpoch(start);
           const credential = { salt, check: checkValue(material).toString('hex') };
+          if (factor) credential.totp = totp.seal(factor, material);
           save({ ...state, pending: credential, operation: 'change' });
           try {
             database.rekeyDatabase(material.subarray(0, 32));

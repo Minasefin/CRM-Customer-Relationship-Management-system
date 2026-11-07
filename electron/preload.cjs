@@ -35,13 +35,13 @@ const api = Object.fromEntries(
 );
 
 let loggingOut = false;
-for (const name of ['isSetUp', 'setUpPassword', 'login', 'logout', 'changePassword']) {
+for (const name of ['isSetUp', 'setUpPassword', 'login', 'logout', 'changePassword', 'getTotpStatus', 'beginTotpSetup', 'confirmTotpSetup', 'loginWithTotp', 'disableTotp']) {
   api[name] = async (...args) => {
     if (name === 'logout') loggingOut = true;
     try {
       const result = await ipcRenderer.invoke(`auth:${name}`, ...args);
       // Recreate the UI with the unlocked dataMode and discard sample state.
-      if ((name === 'login' || name === 'setUpPassword') && result.ok) setTimeout(() => location.reload(), 0);
+      if ((name === 'login' || name === 'loginWithTotp' || name === 'setUpPassword') && result.ok) setTimeout(() => location.reload(), 0);
       return result;
     } catch (err) { throw clean(err); }
     finally {

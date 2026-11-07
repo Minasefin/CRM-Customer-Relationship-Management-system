@@ -125,7 +125,11 @@ function createDatabase(filename) {
           candidate.transaction(()=>candidate.exec(fs.readFileSync(path.join(__dirname,'migrations','003-file-links.sql'),'utf8')))();
           version=3;
         }
-        if(version!==3) fail('Unsupported database version.');
+        if(version===3) {
+          candidate.transaction(()=>candidate.exec(fs.readFileSync(path.join(__dirname,'migrations','004-app-meta.sql'),'utf8')))();
+          version=4;
+        }
+        if(version!==4) fail('Unsupported database version.');
         db=candidate;
         return {ok:true};
       } catch { candidate?.close(); fail('Unable to open database. Check the key and database version.'); }
@@ -136,6 +140,17 @@ function createDatabase(filename) {
       // Make the encrypted main file self-contained before copying it.
       ready().pragma('wal_checkpoint(TRUNCATE)');
       if(ready().pragma('journal_mode=DELETE',{simple:true})!=='delete') fail('Close other database connections before moving storage.');
+    },
+    // Main process only (Nic's auth), never exposed to the screens: whether sign-in needs a
+    // second factor. Kept inside the encrypted file so auth.json edits can't turn 2FA off.
+    secondFactorRequired() {
+      return ready().prepare("SELECT value FROM app_meta WHERE key='second_factor'").get()?.value==='1';
+    },
+    setSecondFactorRequired(required) {
+      if(typeof required!=='boolean') fail('Expected true or false.');
+      if(required) run("INSERT INTO app_meta(key,value) VALUES ('second_factor','1') ON CONFLICT(key) DO UPDATE SET value='1'");
+      else run("DELETE FROM app_meta WHERE key='second_factor'");
+      return {ok:true};
     },
     rekeyDatabase(key) {
       if(!Buffer.isBuffer(key)||key.length!==32) fail('A 32-byte key is required.');
@@ -221,7 +236,7 @@ function createDatabase(filename) {
     archiveContract(id,archived=true) { one('contracts',id); run('UPDATE contracts SET archived=? WHERE id=?',flag(archived),id); return one('contracts',id); },
   };
   // UI-facing methods are async and sanitize SQLite errors before IPC logging.
-  for(const name of Object.keys(api)) if(!['openDatabase','closeDatabase','isOpen','rekeyDatabase','prepareRelocation'].includes(name)) {
+  for(const name of Object.keys(api)) if(!['openDatabase','closeDatabase','isOpen','rekeyDatabase','prepareRelocation','secondFactorRequired','setSecondFactorRequired'].includes(name)) {
     const fn=api[name];
     api[name]=async(...args)=>{try{return fn(...args);}catch(e){if(e.userMessage) throw e; fail('Database operation failed. Check the supplied fields.');}};
   }

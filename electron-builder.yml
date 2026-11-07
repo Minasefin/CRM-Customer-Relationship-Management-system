@@ -12,6 +12,9 @@ files:
   - electron/**/*
   - database/index.cjs
   - database/schema.sql
+  - database/attachments.cjs
+  - database/storage.cjs
+  - database/migrations/*.sql
   - auth/index.cjs
   - auth/password-policy.cjs
   - auth/blocked-passwords.sha256

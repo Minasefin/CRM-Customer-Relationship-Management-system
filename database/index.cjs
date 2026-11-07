@@ -28,7 +28,8 @@ const now = () => new Date().toISOString();
 const platforms = ['x', 'instagram', 'snapchat', 'facebook'];
 const mappings = {
   organizations: { created_at: 'createdAt' },
-  contacts: { org_id:'orgId', first_name:'firstName', last_name:'lastName', created_at:'createdAt' },
+  contacts: { org_id:'orgId', first_name:'firstName', middle_name:'middleName', last_name:'lastName', created_at:'createdAt' },
+  organization_attachments: { org_id:'orgId', mime_type:'mimeType', created_at:'createdAt' },
   contracts: { contact_id:'contactId', org_id:'orgId', start_date:'start', end_date:'end' },
   employment_history: { contact_id:'contactId', org_id:'orgId', start_date:'start', end_date:'end' },
 };
@@ -81,7 +82,7 @@ function createDatabase(filename) {
       for(const platform of platforms) put('social_accounts',{contact_id:id,platform,handle:str(d.social[platform]??'',200)});
     }
   }
-  const contactFields = d => ({first_name:str(d.firstName,200),last_name:str(d.lastName,200),title:str(d.title,200),address:str(d.address),spouse:str(d.spouse,200),photo:image(d.photo)});
+  const contactFields = d => ({first_name:str(d.firstName,200),middle_name:str(d.middleName,200),prefix:str(d.prefix,50),suffix:str(d.suffix,50),last_name:str(d.lastName,200),title:str(d.title,200),address:str(d.address),spouse:str(d.spouse,200),photo:image(d.photo)});
   const organizationFields = d => ({name:str(d.name,200),city:str(d.city,200),country:str(d.country,200),logo:image(d.logo)});
   function contractFields(d) {
     one('contacts',d.contactId);
@@ -103,17 +104,28 @@ function createDatabase(filename) {
         candidate.pragma('foreign_keys=ON');
         candidate.pragma('secure_delete=ON');
         candidate.pragma('temp_store=MEMORY');
-        const version=candidate.pragma('user_version',{simple:true});
+        let version=candidate.pragma('user_version',{simple:true});
         if(version===0) {
           if(candidate.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type='table'").get().n) fail('Unversioned database requires migration.');
           candidate.transaction(()=>candidate.exec(fs.readFileSync(path.join(__dirname,'schema.sql'),'utf8')))();
-        } else if(version!==1) fail('Unsupported database version.');
+          version=candidate.pragma('user_version',{simple:true});
+        }
+        if(version===1) {
+          candidate.transaction(()=>candidate.exec(fs.readFileSync(path.join(__dirname,'migrations','002-names-attachments.sql'),'utf8')))();
+          version=2;
+        }
+        if(version!==2) fail('Unsupported database version.');
         db=candidate;
         return {ok:true};
       } catch { candidate?.close(); fail('Unable to open database. Check the key and database version.'); }
     },
     closeDatabase() { if(db) db.close(); db=undefined; return {ok:true}; },
     isOpen:()=>!!db,
+    prepareRelocation() {
+      // Make the encrypted main file self-contained before copying it.
+      ready().pragma('wal_checkpoint(TRUNCATE)');
+      if(ready().pragma('journal_mode=DELETE',{simple:true})!=='delete') fail('Close other database connections before moving storage.');
+    },
     rekeyDatabase(key) {
       if(!Buffer.isBuffer(key)||key.length!==32) fail('A 32-byte key is required.');
       ready().rekey(key); return {ok:true};
@@ -123,6 +135,28 @@ function createDatabase(filename) {
     createOrganization(d) { obj(d); const id=randomUUID(); put('organizations',{id,...organizationFields(d),archived:0,created_at:now()}); return one('organizations',id); },
     updateOrganization(id,d) { obj(d); const old=one('organizations',id); put('organizations',organizationFields({...old,...d}),id); return one('organizations',id); },
     archiveOrganization(id,archived=true) { one('organizations',id); run('UPDATE organizations SET archived=? WHERE id=?',flag(archived),id); return one('organizations',id); },
+    getOrganizationAttachments(orgId) {
+      one('organizations',orgId);
+      return rows('SELECT id,org_id,name,mime_type,size,created_at,archived FROM organization_attachments WHERE org_id=? ORDER BY created_at,id',orgId).map(r=>shape('organization_attachments',r));
+    },
+    addOrganizationAttachment(orgId,data) { obj(data); org(orgId);
+      const { validateAttachment }=require('./attachments.cjs');
+      const file=validateAttachment(data);
+      const id=randomUUID(), created_at=now();
+      put('organization_attachments',{id,org_id:orgId,name:file.name,mime_type:file.mimeType,size:file.bytes.length,data:file.bytes,created_at,archived:0});
+      return shape('organization_attachments',{id,org_id:orgId,name:file.name,mime_type:file.mimeType,size:file.bytes.length,created_at,archived:0});
+    },
+    getOrganizationAttachment(id) {
+      const row=one('organization_attachments',id);
+      const {data,...metadata}=row;
+      return {...metadata,dataBase64:data.toString('base64')};
+    },
+    archiveOrganizationAttachment(id,archived=true) {
+      const row=one('organization_attachments',id);
+      run('UPDATE organization_attachments SET archived=? WHERE id=?',flag(archived),id);
+      const {data,...metadata}=row;
+      return {...metadata,archived};
+    },
     getContacts:()=>rows('SELECT id FROM contacts ORDER BY created_at,id').map(r=>contact(r.id)),
     getContact:contact,
     createContact(d) { obj(d); return transaction(()=>{
@@ -163,7 +197,7 @@ function createDatabase(filename) {
     archiveContract(id,archived=true) { one('contracts',id); run('UPDATE contracts SET archived=? WHERE id=?',flag(archived),id); return one('contracts',id); },
   };
   // UI-facing methods are async and sanitize SQLite errors before IPC logging.
-  for(const name of Object.keys(api)) if(!['openDatabase','closeDatabase','isOpen','rekeyDatabase'].includes(name)) {
+  for(const name of Object.keys(api)) if(!['openDatabase','closeDatabase','isOpen','rekeyDatabase','prepareRelocation'].includes(name)) {
     const fn=api[name];
     api[name]=async(...args)=>{try{return fn(...args);}catch(e){if(e.userMessage) throw e; fail('Database operation failed. Check the supplied fields.');}};
   }

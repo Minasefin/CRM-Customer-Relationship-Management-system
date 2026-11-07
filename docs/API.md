@@ -58,7 +58,7 @@ These match `src/api/mockData.js`.
 ```js
 Organization = { id, name, country, city, logo, archived, createdAt }  // logo: image data or null; archived: boolean
 Contact = {
-  id, firstName, lastName, title, status,
+  id, firstName, middleName, lastName, prefix, suffix, title, status,
   orgId,                                    // null = Independent (no organization)
   photo,                                    // image data URL or null
   phones: [{ label, number }],              // label: 'Mobile' | 'Work' | 'Home' | 'Other'
@@ -86,3 +86,35 @@ The UI follows all of these. Archived contracts are hidden everywhere except the
 - Contact creation starts active; protected fields cannot be supplied to override IDs, timestamps or notes.
 - Not-found and invalid operations reject with a safe userMessage.
 - Internal lifecycle: openDatabase(key: Buffer[32]), closeDatabase(), isOpen(), rekeyDatabase(newKey: Buffer[32]). These synchronous main-process functions are not renderer API methods. See database/README.md.
+
+## Revision API additions: issues #40, #41 and #42
+
+Proposed in this feature PR for coordinated UI review. Existing names and return fields remain supported.
+
+Contact adds optional strings middleName (max 200), prefix and suffix (max 50 each).
+They default to '' on creation/migration. updateContact preserves omitted fields; '' clears a field.
+The existing getContacts/getContact responses supply these fields for UI search and Soundex matching.
+
+### Organization attachments
+- getOrganizationAttachments(orgId) -> Attachment[] (metadata only; includes archived)
+- addOrganizationAttachment(orgId, { name, mimeType, dataBase64 }) -> Attachment
+- getOrganizationAttachment(id) -> { ...Attachment, dataBase64 }
+- archiveOrganizationAttachment(id, archived = true) -> Attachment
+
+Attachment = { id, orgId, name, mimeType, size, createdAt, archived }.
+size is decoded bytes. Each file must be 1 byte through 10 MiB. Content and metadata live inside the encrypted database; no plaintext attachment cache is created.
+Supported filename extensions/MIME pairs: PDF, PNG, JPEG, GIF, WebP, TXT, CSV, DOCX, XLSX and PPTX (see database/attachments.cjs for exact MIME strings).
+Base64 must be canonical. Filenames cannot contain paths/control characters. File types are metadata validation, not antivirus scanning; bytes are never automatically executed or opened.
+Archiving retains bytes. Files belonging to archived firms remain readable; restore the firm before adding files.
+Mina's UI must enforce the same size limit before reading/encoding a file and filter archived metadata. Viewing/exporting plaintext files is not implemented by these APIs.
+
+### Storage location (main-process folder dialog)
+- getStorageLocation() -> { directory }
+- chooseStorageLocation() -> { canceled: true } OR { ok: true, directory, restartRequired: true, originalRetained: true }
+
+Both require a signed-in production session and reject dev:db mode. The renderer supplies no path.
+The native picker chooses an existing empty folder. After the dialog, authentication is rechecked; relocation closes/checkpoints the database and locks the session.
+crm.db and auth.json are copied together and verified before an atomic storage-location.json pointer in the original Electron userData folder is updated. Auria then restarts and requires login.
+The original pair is retained as a recovery copy and is no longer the active database. Protect that copy: it still uses the password in effect when copied.
+A failed copy leaves the original active and requires signing in again. An unavailable selected drive blocks startup rather than silently creating a new database. Reconnect the drive and restart.
+No credentials are stored in the location pointer. Nic's authentication format and algorithms are unchanged.

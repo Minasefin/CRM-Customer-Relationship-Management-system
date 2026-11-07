@@ -12,6 +12,7 @@ const { setupAuthBridge, disableAuthForDevelopmentDatabase } = require('./auth-b
 
 // The functions the screens may call. Key and lifecycle functions are never exposed.
 const UI_FUNCTIONS = [
+  'getOrganizationAttachments', 'addOrganizationAttachment', 'getOrganizationAttachment', 'archiveOrganizationAttachment',
   'getOrganizations', 'getOrganization', 'createOrganization', 'updateOrganization', 'archiveOrganization',
   'getContacts', 'getContact', 'createContact', 'updateContact', 'setContactStatus', 'moveContact',
   'getEmploymentHistory', 'getAllEmployment', 'addNote', 'updateNote',
@@ -40,8 +41,11 @@ async function setupDatabaseBridge() {
   const key = devKeyFromEnv();
   if (!key && (app.isPackaged || !process.env.CRM_DEV_KEY)) {
     const { createDatabase } = require('../database/index.cjs');
-    const db = createDatabase(path.join(app.getPath('userData'), 'crm.db'));
-    const auth = setupAuthBridge(db);
+    const { resolveStorage } = require('../database/storage.cjs');
+    const directory = resolveStorage(app.getPath('userData'));
+    const db = createDatabase(path.join(directory, 'crm.db'));
+    const auth = setupAuthBridge(db, directory);
+    require('./storage-bridge.cjs').setupStorageBridge({auth,db,directory});
     // Getters make the existing preload handshake reflect the current session.
     status = { get enabled() { return auth.isUnlocked(); },
       get mode() { return auth.isUnlocked() ? 'database' : 'sample'; }, error: null };
@@ -52,6 +56,7 @@ async function setupDatabaseBridge() {
     return status;
   }
   disableAuthForDevelopmentDatabase();
+  require('./storage-bridge.cjs').setupStorageBridge();
   if (!key) return status;
 
   let db;

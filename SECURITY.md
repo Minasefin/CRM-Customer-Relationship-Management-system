@@ -67,3 +67,8 @@ Until the login exists, developers open the database with a random test key:
 ## Found a problem?
 
 Don't post details in a public place. Message the team on Teams and fix it in a pull request.
+
+## Custom data folders and attachments
+The default remains Electron userData/crm.db. The authenticated native folder picker can relocate crm.db together with auth.json to an empty directory; storage-location.json in userData records that location. Missing selected storage must never fall back to creating a fresh database.
+Attachments are encrypted BLOBs in crm.db, bounded to 10 MiB per file. No automatic external opening or plaintext export is provided.
+Relocation preserves the old encrypted database/auth pair as a recovery copy. It remains sensitive and retains the old credentials if the active password is later changed.

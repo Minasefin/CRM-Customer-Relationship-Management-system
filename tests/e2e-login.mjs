@@ -10,6 +10,7 @@ import path from 'node:path';
 const DIR = mkdtempSync(path.join(tmpdir(), 'crm-login-e2e-'));
 const PW = 'maple ladder orbit canoe river';
 const PW2 = 'quiet harbor lantern seven fig';
+const PW3 = 'copper meadow violin tundra ash'; // set with the recovery key
 
 // A real authenticator code (RFC 6238, SHA-1, 6 digits, 30 s) from the setup key shown in Settings.
 function totp(base32, time = Date.now()) {
@@ -156,11 +157,50 @@ try {
     await page.getByRole('button', { name: 'Turn off', exact: true }).click();
     await page.locator('.setting-row', { hasText: 'Two-step sign-in' }).locator('.pill-off').waitFor();
   });
+  await s('recovery key: make one in Settings, then "Forgot your password?" sets a new one', async () => {
+    await page.getByRole('button', { name: 'Make a recovery key…' }).click();
+    await page.getByLabel('Your Auria password', { exact: true }).fill(PW2);
+    await page.getByRole('button', { name: 'Make key' }).click();
+    const key = await page.locator('.recovery-key').textContent();
+    if (!/^([A-Z2-7]{4}-){7}[A-Z2-7]{4}$/.test(key)) throw new Error(`odd recovery key: ${key}`);
+    // Copy key really puts the key on the system clipboard.
+    await app.evaluate(({ clipboard }) => clipboard.writeText('before'));
+    await page.getByRole('button', { name: 'Copy key' }).click();
+    await page.getByRole('button', { name: 'Copied' }).waitFor();
+    if ((await app.evaluate(({ clipboard }) => clipboard.readText())) !== key) throw new Error('Copy key did not copy the recovery key');
+    await page.getByLabel('I saved my recovery key').check();
+    await page.getByRole('button', { name: 'Done' }).click();
+    await page.locator('.setting-row', { hasText: 'Recovery key' }).locator('.pill-on').waitFor();
+
+    await page.locator('.sidebar').getByRole('button', { name: 'Lock' }).click();
+    await page.getByRole('heading', { name: 'Locked' }).waitFor();
+    await page.getByRole('button', { name: 'Forgot your password?' }).click();
+    await page.getByLabel('Recovery key').fill(key.toLowerCase().replace(/-/g, ' '));
+    await page.getByLabel('New password', { exact: true }).fill(PW3);
+    await page.getByLabel('Type it again', { exact: true }).fill(PW3);
+    await page.getByRole('button', { name: 'Reset password' }).click();
+    await page.getByRole('heading', { name: 'Password changed' }).waitFor();
+    const fresh = await page.locator('.recovery-key').textContent();
+    if (fresh === key) throw new Error('the recovery key was not replaced');
+    await app.evaluate(({ clipboard }) => clipboard.writeText('before'));
+    await page.getByRole('button', { name: 'Copy key' }).click();
+    await page.getByRole('button', { name: 'Copied' }).waitFor();
+    if ((await app.evaluate(({ clipboard }) => clipboard.readText())) !== fresh) throw new Error('Copy key (after reset) did not copy the new key');
+    await page.getByLabel('I saved my recovery key').check();
+    await page.getByRole('button', { name: 'Open Auria' }).click();
+    await page.waitForFunction(() => window.crm?.dataMode === 'database' && document.querySelector('.sidebar'));
+    await page.locator('.nav').getByRole('button', { name: /^Organizations/ }).click();
+    await page.getByText('Synthetic Test Firm').first().waitFor();
+  });
   await app.close();
   ({ app, page } = await launch());
-  await s('after restart: new password works and data is kept', async () => {
+  await s('after restart: the old password is refused, the reset one works, data is kept', async () => {
     await page.getByRole('heading', { name: 'Welcome back' }).waitFor();
-    await page.getByLabel('Password', { exact: true }).fill(PW2);
+    await page.getByLabel('Password', { exact: true }).fill(PW2); // the password from before the reset
+    await page.getByRole('button', { name: 'Unlock' }).click();
+    await page.getByText('Incorrect password.').waitFor();
+    await page.getByRole('button', { name: 'Unlock' }).waitFor({ timeout: 8000 });
+    await page.getByLabel('Password', { exact: true }).fill(PW3);
     await page.getByRole('button', { name: 'Unlock' }).click();
     await page.waitForFunction(() => window.crm?.dataMode === 'database' && document.querySelector('.sidebar'));
     await page.locator('.nav').getByRole('button', { name: /^Organizations/ }).click();
@@ -176,7 +216,7 @@ try {
     await page.getByRole('heading', { name: 'Locked' }).waitFor();
   });
   await s('closing the window (red ✕) while signed in quits without an error', async () => {
-    await page.getByLabel('Password', { exact: true }).fill(PW2);
+    await page.getByLabel('Password', { exact: true }).fill(PW3);
     await page.getByRole('button', { name: 'Unlock' }).click();
     await page.waitForFunction(() => window.crm?.dataMode === 'database' && document.querySelector('.sidebar'));
     const proc = app.process(); // keep the handle: it's unreachable once the app quits

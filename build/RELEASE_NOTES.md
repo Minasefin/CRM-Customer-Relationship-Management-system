@@ -7,6 +7,11 @@
 - 10 one-time **recovery codes** in case you lose your phone (shown once, with Copy).
 - The setting is also kept inside the encrypted database, so editing files on disk can't switch it off.
 
+**Forgot your password? Recovery key**
+- Make a **recovery key** in **Settings → Security** (shown once, with Copy). If you forget your password, choose **Forgot your password?** on the sign-in screen and use it to set a new one. You get a new recovery key each time.
+- A recovery key doesn't get around two-step sign-in: the 6-digit code is still needed.
+- Without a recovery key, nobody can reset the password. Not even us.
+
 **Files**
 - Attach files to a firm, a person or a contract: PDF, Word, Excel, PowerPoint, images, TXT and CSV, up to 10 MB each. They're stored **inside the encrypted database**.
 - **Drop a file** into the Add file pop-up, or choose one from Finder / File Explorer.

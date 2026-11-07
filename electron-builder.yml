@@ -17,6 +17,7 @@ files:
   - database/migrations/*.sql
   - auth/index.cjs
   - auth/totp.cjs
+  - auth/recovery.cjs
   - auth/password-policy.cjs
   - auth/blocked-passwords.sha256
   - auth/BLOCKLIST-LICENSE.txt

@@ -7,10 +7,12 @@ const { performance } = require('node:perf_hooks');
 const { normalize, validateNewPassword } = require('./password-policy.cjs');
 
 const totp = require('./totp.cjs');
+const recovery = require('./recovery.cjs');
 
 const scryptAsync = promisify(scrypt);
 const IDLE_MS = 15 * 60 * 1000;
 const MISSING_FACTOR = 'Two-step sign-in is turned on for this data, but its details are missing from this computer. Restore the matching login file (auth.json) from a backup.';
+const BAD_RECOVERY_KEY = "That recovery key didn't work. Check it and try again.";
 const GENERIC_ERROR = 'Authentication could not be completed. Try again. If this continues, restore a matching database and authentication backup.';
 const safeError = message => Object.assign(new Error(message), { userMessage: message });
 
@@ -55,7 +57,8 @@ function atomicWrite(filename, state) {
 
 function validCredential(value) {
   return value && typeof value === 'object' && /^[a-f0-9]{32}$/.test(value.salt) && /^[a-f0-9]{64}$/.test(value.check) &&
-    (value.totp === undefined || totp.validEnvelope(value.totp));
+    (value.totp === undefined || totp.validEnvelope(value.totp)) &&
+    (value.recovery === undefined || recovery.validRecord(value.recovery));
 }
 function validateState(state) {
   if (!state || ![1, 2].includes(state.version) || !Number.isInteger(state.failures) || state.failures < 0 || state.failures > 100 ||
@@ -298,6 +301,91 @@ function createAuth({ database, directory, databaseFile = path.join(directory, '
     async logout() {
       try { return lock(); } catch { throw safeError(GENERIC_ERROR); }
     },
+    async getRecoveryStatus() {
+      try { return { enabled: Boolean(readState()?.current?.recovery) }; }
+      catch { throw safeError(GENERIC_ERROR); }
+    },
+    // Signed in + current password: make a new recovery key (replaces any old one). Shown once.
+    createRecoveryKey(value) {
+      return withOperation(async start => {
+        requireSession();
+        const state = readState();
+        if (!state || state.operation !== null) throw new Error('Unresolved authentication state');
+        reserveAttempt(state);
+        const material = await deriveKey(existingPassword(value), state.current.salt);
+        let kek;
+        try {
+          assertEpoch(start); requireSession();
+          if (!matches(material, state.current)) throw safeError('Incorrect password.');
+          const code = recovery.generate();
+          const salt = randomBytes(16).toString('hex');
+          kek = await deriveKey(code, salt);
+          assertEpoch(start); requireSession();
+          state.current.recovery = recovery.seal(material, kek.subarray(0, 32), salt);
+          save(stable(state.current));
+          lastActivity = monotonicNow();
+          return { ok: true, recoveryKey: code };
+        } finally { material.fill(0); kek?.fill(0); }
+      });
+    },
+    // Forgot the password: recovery key (+ 2FA code if it's on) -> new password and a NEW
+    // recovery key (the old one stops working). Same rekey steps as changePassword; the
+    // session unlocks at the end. The screen reloads itself after showing the new key.
+    resetPasswordWithRecoveryKey(keyValue, newValue, code) {
+      return withOperation(async start => {
+        if (unlocked) throw safeError('The database is already unlocked.');
+        const password = newPassword(newValue);
+        const state = readState();
+        if (!state || state.operation === 'setup') throw safeError('Create a password first.');
+        // An interrupted change keeps the old credential as `current`; the recovery key opens that one.
+        const credential = state.current;
+        if (!credential.recovery) throw safeError('No recovery key was made for this data, so the password can\'t be reset.');
+        const typed = recovery.normalize(keyValue);
+        if (!typed) throw safeError(BAD_RECOVERY_KEY);
+        reserveAttempt(state);
+        const kek = await deriveKey(typed, credential.recovery.salt);
+        let material, next, nextKek;
+        try {
+          assertEpoch(start);
+          try { material = recovery.openWithCode(credential.recovery, kek.subarray(0, 32)); }
+          catch { throw safeError(BAD_RECOVERY_KEY); }
+          if (material.length !== 64 || !matches(material, credential)) throw safeError(BAD_RECOVERY_KEY);
+          if (!fs.existsSync(databaseFile)) throw new Error('Missing database');
+          try { database.openDatabase(material.subarray(0, 32)); }
+          catch {
+            throw safeError(state.operation === 'change'
+              ? 'A password change finished before this. Sign in with the new password you chose.'
+              : GENERIC_ERROR);
+          }
+          let factor;
+          try {
+            // Same rule as sign-in: a recovery key is not a way around two-step sign-in.
+            const required = database.secondFactorRequired();
+            if (required && !credential.totp) throw safeError(MISSING_FACTOR);
+            if (credential.totp) {
+              factor = totp.unseal(credential.totp, material);
+              if (!totp.consume(factor, code, now())) throw safeError('A valid authenticator or recovery code is required.');
+              credential.totp = totp.seal(factor, material);
+              save(state); // consume before going on
+            }
+            const salt = randomBytes(16).toString('hex');
+            next = await deriveKey(password, salt);
+            const newCode = recovery.generate();
+            const recoverySalt = randomBytes(16).toString('hex');
+            nextKek = await deriveKey(newCode, recoverySalt);
+            assertEpoch(start);
+            const fresh = { salt, check: checkValue(next).toString('hex') };
+            if (factor) fresh.totp = totp.seal(factor, next);
+            fresh.recovery = recovery.seal(next, nextKek.subarray(0, 32), recoverySalt);
+            save({ ...state, current: credential, pending: fresh, operation: 'change' });
+            database.rekeyDatabase(next.subarray(0, 32));
+            save(stable(fresh));
+            unlocked = true; lastActivity = monotonicNow();
+            return { ok: true, recoveryKey: newCode };
+          } catch (err) { lock(); throw err; }
+        } finally { kek.fill(0); material?.fill(0); next?.fill(0); nextKek?.fill(0); }
+      });
+    },
     changePassword(oldValue, newValue) {
       return withOperation(async start => {
         checkInactivity();
@@ -306,12 +394,14 @@ function createAuth({ database, directory, databaseFile = path.join(directory, '
         const state = readState();
         if (!state || state.operation !== null) throw new Error('Unresolved authentication state');
         reserveAttempt(state);
-        let factor;
+        let factor, recoveryKek;
         const oldMaterial = await deriveKey(existingPassword(oldValue), state.current.salt);
         try {
           assertEpoch(start);
           if (!matches(oldMaterial, state.current)) throw safeError('Incorrect password.');
           if (state.current.totp) factor = totp.unseal(state.current.totp, oldMaterial);
+          // Keep the recovery key working: re-lock its copy with the new password below.
+          if (state.current.recovery) recoveryKek = recovery.openWithPassword(state.current.recovery, oldMaterial);
           clearEnrollment();
         } finally { oldMaterial.fill(0); }
         if (password === existingPassword(oldValue)) {
@@ -325,6 +415,7 @@ function createAuth({ database, directory, databaseFile = path.join(directory, '
           assertEpoch(start);
           const credential = { salt, check: checkValue(material).toString('hex') };
           if (factor) credential.totp = totp.seal(factor, material);
+          if (recoveryKek) credential.recovery = recovery.seal(material, recoveryKek, state.current.recovery.salt);
           save({ ...state, pending: credential, operation: 'change' });
           try {
             database.rekeyDatabase(material.subarray(0, 32));
@@ -332,7 +423,7 @@ function createAuth({ database, directory, databaseFile = path.join(directory, '
             lastActivity = monotonicNow();
             return { ok: true };
           } catch (err) { lock(); throw err; }
-        } finally { material.fill(0); }
+        } finally { material.fill(0); recoveryKek?.fill(0); }
       });
     },
   };

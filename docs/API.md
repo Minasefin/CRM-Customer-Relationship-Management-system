@@ -23,6 +23,9 @@ All functions are async and return plain objects. Dates are ISO strings (`2026-1
 | `confirmTotpSetup(code)` | `{ ok, recoveryCodes?, error? }` | Requires the same unlocked session and a valid six-digit code. Enables TOTP and returns ten recovery codes **once**. |
 | `loginWithTotp(password, code)` | `{ ok, error? }` | Accepts a six-digit authenticator code or one unused recovery code. Requires both factors when enrolled; behaves like login when not enrolled. |
 | `disableTotp(password, code)` | `{ ok, error? }` | Requires an unlocked session, current password, and a fresh authenticator or unused recovery code. Invalidates the enrollment and its recovery codes. |
+| `getRecoveryStatus()` | `{ enabled }` | Available while locked. |
+| `createRecoveryKey(password)` | `{ ok, recoveryKey?, error? }` | Signed in. Shown **once**; replaces any previous key. |
+| `resetPasswordWithRecoveryKey(key, newPassword, code?)` | `{ ok, recoveryKey?, error? }` | Signed out. `code` is required when 2FA is on. Unlocks the session and returns a **new** recovery key; the screen shows it, then reloads. |
 
 Enrollment is optional; after confirmation every login requires both factors.
 All codes are strings (preserve leading zeroes). Recovery codes are exactly 32

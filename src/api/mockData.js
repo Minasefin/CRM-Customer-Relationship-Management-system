@@ -99,3 +99,15 @@ contacts.forEach((x) => {
     d += 8 + rand() * 30;
   }
 });
+
+// Files attached to a firm (#41). In the real app they're stored inside the encrypted database.
+const b64len = (b) => Math.floor((b.length * 3) / 4) - (b.endsWith('==') ? 2 : b.endsWith('=') ? 1 : 0);
+const file = (id, orgId, name, mimeType, dataBase64, createdDaysAgo, archived = false) => ({
+  id, orgId, name, mimeType, size: b64len(dataBase64), createdAt: daysAgo(createdDaysAgo), archived, dataBase64,
+});
+export const attachments = [
+  file('a-1', 'org-1', 'Ironclad master agreement 2026.pdf', 'application/pdf', 'JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqCjIgMCBvYmo8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PmVuZG9iagozIDAgb2JqPDwvVHlwZS9QYWdlL1BhcmVudCAyIDAgUi9NZWRpYUJveFswIDAgNjEyIDc5Ml0+PmVuZG9iagp0cmFpbGVyPDwvUm9vdCAxIDAgUj4+CiUlRU9GCg==', 60),
+  file('a-2', 'org-1', 'Arlington office.png', 'image/png', 'iVBORw0KGgoAAAANSUhEUgAAAeAAAAEsCAMAAAAsIJBoAAAAwFBMVEXX3+nD1evC1OrB0+rA0um/0um+0ei90Oe8z+a7zua6zeW5zeW4zOS3y+O2yuK1yeK0yeGzyOGzx+Cyx+Cxxt+wxd6vxN6uw92tw92swtyqwdupv9qnvtilvNeju9ahudWhtMmvn3+unn6unX2tnXytnHusm3qrmnmqmXepmHapl3WolnSnlXOmlHKmk3Glkm+kkW6jkG2ij2yijmuhjWmgjGifi2eeimaeiWWdiGOciGOch2KMgGh4gIpianZQVmHwM+U7AAADWUlEQVR42u3ax24cMRBF0XHOOSmMLMg555z6///KCwOGDUMYSB42q1+fu+WGxbMrcHFE0S08AWABFmABFmAdFPioogMMWIAFWIDVAviYogMMWJMGPq7oAAMWYAFWJ+ATig4wYAFWXeCTig4wYAEWYAFWC+BTig4wYAEWYAFWC+DTig4wYAEWYAFWC+Azig4wYE0a+KyiAwxYgAVYnYDPKTrAgAVYdYHPKzrAgAVYgAVYLYAvKDrAgAVYgAVYLYAvKjrAgAVYgAVYLYAvKTrAgDVp4MuKDjBgTRr4iqIDDFiABViA1QL4qqJbXFN0gAELsACrE/B1RQcYsAALsACrBfANRQcYsAALsACrBfBNRQcYsCYNfEvRAQYswJoj8PfqzQN4o1nlgTfmEGDAgAEDrgu82azywJtzCDBgwIDnCTwADgYefgU4Enj4s+LAW80qD3zIuYZ/26ob4P/WrW0MeB26hY0Br0m3qvF4wIu/K3C6bt2SxoDXqlvPGPC6dYsZA26gW8kYcCPeKsSAW+kWMV5sN6s88P5XH9bZdtcAt9Xtbgy4uW5fY8Bj6HY0BjySbi9jwOPpdjEGPKru+MazBx76NB7wslnlgZfLoWfLUZox8NC/KOBy/egfYMCAAQMGDBgwYMCAAQMGDBgw4AMA7zQL8Mp22gcYMGDAgAEDBgy4BfDtZgFe2e32AQYMGPDagff/xgQYMGDAgAEDBgwYcH/g3WYBXtlu+wADBgwYMGDAgAEDBgwYMGDAv/umaQYYMGDAAizAAizAOhSwRYdNFmDAgAEDBgwYMGDAswPeaxbgle21b7Gn6AADFmDVBb6j6AADFmDVBb6r6AAD1qSB7yk6wOnA9xUdYMACrLrADxQdYMACLMDqBPxQ0QEGLMCqC/xI0QEGLMACLMACrAMDP1Z0gNOBnyg6wIAFWHWBnyo6wIAFWIDVCfiZogMMWIBVF/i5ogMMWIBVF/iFogMMWIAFWJ2AXyo6wIAFWHWBXyk6wIAFWIDVCfi1ogMMWIBVF/iNogMMWIBVF/itogMMWIAFWJ2A3yk6wIAFWHWB3ys6wIAFWIDVCfiDogMMWIBVF/ijogMMWIBVF/iTogMMWIAFWJ2APys6wIA1aeAvim7xVdEBBizAKttPScSg+czXDOkAAAAASUVORK5CYII=', 30),
+  file('a-3', 'org-1', 'Team roster.csv', 'text/csv', 'TmFtZSxSb2xlLENsZWFyYW5jZSxTdGFydApNYXJjdXMgSGFsZSxUZWFtIGxlYWQsU2VjcmV0LDIwMjQtMDItMDEKRGFuYSBXaGl0ZmllbGQsTWVkaWMsU2VjcmV0LDIwMjUtMDQtMTAKVmljdG9yIFNhdG8sRW5naW5lZXIsVG9wIFNlY3JldCwyMDI2LTA4LTA4Cg==', 9),
+  file('a-4', 'org-1', 'Old roster.csv', 'text/csv', 'TmFtZSxSb2xlLENsZWFyYW5jZSxTdGFydApNYXJjdXMgSGFsZSxUZWFtIGxlYWQsU2VjcmV0LDIwMjQtMDItMDEKRGFuYSBXaGl0ZmllbGQsTWVkaWMsU2VjcmV0LDIwMjUtMDQtMTAKVmljdG9yIFNhdG8sRW5naW5lZXIsVG9wIFNlY3JldCwyMDI2LTA4LTA4Cg==', 400, true),
+];

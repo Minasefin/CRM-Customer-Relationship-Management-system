@@ -35,7 +35,7 @@ app.whenReady().then(async () => {
   const second = `Synthetic replacement ${randomBytes(16).toString('hex')}`;
   await mode('sample');
   assert.equal(await call('isSetUp'), false);
-  assert.equal(await evaluate('Object.keys(window.crm.api).length'), 30);
+  assert.equal(await evaluate('Object.keys(window.crm.api).length'), 31);
   await assert.rejects(call('getContacts'), /locked/);
   await assert.rejects(call('getOrganizationAttachments','missing'), /locked/);
   await assert.rejects(call('getStorageLocation'), /locked/);
@@ -94,7 +94,7 @@ app.whenReady().then(async () => {
   await until(async()=>!wc.isLoading()&&await evaluate("window.crm?.dataMode === 'sample'"));
   await assert.rejects(call('login',second),/Restart/);
   app.quit=originalQuit;
-  console.log('PASS Electron: 30 named APIs, names, encrypted attachments, storage picker/copy/restart, auth and locking');
+  console.log('PASS Electron: 31 named APIs, names, encrypted attachments, storage picker/copy/restart, auth and locking');
   clearTimeout(watchdog);
   app.quit();
 }).catch(() => {

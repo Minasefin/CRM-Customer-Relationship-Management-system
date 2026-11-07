@@ -1,7 +1,7 @@
 {
   "name": "contractor-crm",
   "productName": "Auria",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "description": "Secure offline desktop CRM for managing military contractors and the firms that employ them.",
   "main": "electron/main.cjs",

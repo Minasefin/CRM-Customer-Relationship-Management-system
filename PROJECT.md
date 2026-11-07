@@ -25,10 +25,10 @@ Update this section whenever something lands, so everyone (and their AI tools) k
 
 | Area | Status | Next step |
 | --- | --- | --- |
-| UI (Mina) | All screens done and connected to the database: contacts, profile (notes with edit, call/text, status, work history), firms, contracts with notes, Home, Statistics, Archived (people, firms, contracts), settings, sounds-like search. Save errors show in plain English. Login: create-password, sign-in and locked screens, Lock button, change password in Settings. | Polish after the client demo |
-| Database (Adrian) | Encrypted SQLite built (`database/`), with tests. Connected to the app; `npm run dev:db` runs it with a test key. | Connected to Nic's login (the password unlocks it) |
-| Auth (Nic) | Ten auth functions including optional TOTP/recovery codes and Electron wiring implemented with offline password screening, scrypt, persistent throttling, recoverable rekeying and 15-minute/sleep locking. Tests in `auth/`. | Installed cross-platform verification. See `auth/README.md`. |
-| Shared | `docs/API.md` agreed Oct 29. Every pull request runs the app on a real encrypted database and clicks through it. Installers for Mac/Windows/Linux build on GitHub and include the database and login. | Tag `v0.1.0` for the Oct 31 release |
+| UI (Mina) | v0.2.0: renamed to Auria (logo, collapsible sidebar, Lock), pop-up forms with unsaved-changes prompt, two-step Enter to save, notes with formatting as you type, customizable Home. Prefix/middle/suffix; files (drop box, linked to a firm/person/contract, in contact and contract forms, preview, save a copy); Settings → Your data (move folder); 2FA screens (QR, recovery codes, code at sign-in). | Feedback from the Nov 7 review |
+| Database (Adrian) | Encrypted SQLite (`database/`), schema version 5: names (#40), encrypted files (#41) for a firm, person and/or contract, choose data folder (#42), 2FA-required flag. Older databases upgrade on open. Tests in `database/`. | Review #68 and #71 (database changes made for the screens) |
+| Auth (Nic) | Password + optional TOTP/recovery codes (#61, merged in #69), with the 2FA-required flag kept in the encrypted database so editing auth.json can't turn 2FA off. scrypt, offline password screening, persistent throttling, rekeying, 15-minute/sleep locking. Tests in `auth/`. | Review #69 (auth.json fix) |
+| Shared | `docs/API.md`. Every pull request runs the app on a real encrypted database and clicks through it (including 2FA and files). Installers for Mac/Windows/Linux build on GitHub. | Tag `v0.2.0` for the Nov 7 revision |
 
 ## What the app stores
 

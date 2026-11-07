@@ -94,6 +94,14 @@ try {
     await page.locator('form.change-password').getByRole('button', { name: 'Change password' }).click();
     await page.getByText('Password changed.').waitFor();
   });
+  await s('settings shows the data folder; Move asks first and Cancel changes nothing', async () => {
+    const shown = await page.locator('.data-folder-path').textContent();
+    if (shown !== DIR) throw new Error(`data folder shows ${shown}, expected ${DIR}`);
+    await page.getByRole('button', { name: 'Move…' }).click();
+    await page.getByRole('heading', { name: 'Move your data to another folder?' }).waitFor();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await page.getByRole('heading', { name: 'Move your data to another folder?' }).waitFor({ state: 'detached' });
+  });
   await app.close();
   ({ app, page } = await launch());
   await s('after restart: new password works and data is kept', async () => {

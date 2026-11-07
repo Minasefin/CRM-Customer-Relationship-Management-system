@@ -238,6 +238,18 @@ export default function ContactForm({ contact, organizations, contacts, onSave, 
                 <span>Suffix</span>
                 <input value={form.suffix} onChange={set('suffix')} list="name-suffixes" placeholder="Jr., III" maxLength={50} />
               </label>
+              <button
+                type="button"
+                className="icon-btn name-extra-remove"
+                aria-label="Remove prefix, middle name and suffix"
+                title="Remove"
+                onClick={() => {
+                  setForm({ ...form, prefix: '', middleName: '', suffix: '' });
+                  setMoreName(false);
+                }}
+              >
+                <Icon name="trash" size={16} />
+              </button>
               <datalist id="name-prefixes">{PREFIXES.map((p) => <option key={p} value={p} />)}</datalist>
               <datalist id="name-suffixes">{SUFFIXES.map((p) => <option key={p} value={p} />)}</datalist>
             </div>

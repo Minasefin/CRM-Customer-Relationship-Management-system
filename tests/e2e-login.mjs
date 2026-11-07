@@ -127,6 +127,13 @@ try {
     await page.getByRole('heading', { name: 'Save your recovery codes' }).waitFor();
     const codes = (await page.locator('.recovery-codes code').allTextContents()).map((c) => c.replace(/\s/g, ''));
     if (codes.length !== 10) throw new Error(`expected 10 recovery codes, got ${codes.length}`);
+    // Copy codes really puts them on the clipboard (the app may write it, never read it).
+    await app.evaluate(({ clipboard }) => clipboard.writeText('before'));
+    await page.getByRole('button', { name: 'Copy codes' }).click();
+    await page.getByRole('button', { name: 'Copied' }).waitFor();
+    const copied = (await app.evaluate(({ clipboard }) => clipboard.readText())).split('\n');
+    if (copied.join(',') !== codes.join(',')) throw new Error(`clipboard has ${JSON.stringify(copied)}`);
+    if (await page.evaluate(() => navigator.clipboard.readText().then(() => 'read', () => 'denied')) !== 'denied') throw new Error('the page could read the clipboard');
     await page.getByLabel('I saved my recovery codes').check();
     await page.getByRole('button', { name: 'Done' }).click();
     await page.locator('.setting-row', { hasText: 'Two-step sign-in' }).locator('.pill-on').waitFor();

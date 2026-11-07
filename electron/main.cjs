@@ -101,9 +101,15 @@ if (!isFirstCopy) {
 
 app.whenReady().then(async () => {
   if (!isFirstCopy) return; // a copy is already open; it was just brought to the front
-  // The app needs no camera, microphone, location, notifications, etc. Deny every request.
-  session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
-  session.defaultSession.setPermissionCheckHandler(() => false);
+  // The app needs no camera, microphone, location, notifications, etc. Deny every request,
+  // except writing text to the clipboard from the app's own page (the "Copy codes" button for
+  // 2FA recovery codes). Reading the clipboard stays denied.
+  const allowed = (wc, permission, url) =>
+    permission === 'clipboard-sanitized-write' && isAppUrl(url || (wc && !wc.isDestroyed() ? wc.getURL() : ''));
+  session.defaultSession.setPermissionRequestHandler((wc, permission, callback, details) =>
+    callback(allowed(wc, permission, details && details.requestingUrl)));
+  session.defaultSession.setPermissionCheckHandler((wc, permission, _origin, details) =>
+    allowed(wc, permission, details && details.requestingUrl));
 
   // Block every network request that isn't the app's own files (or the local dev server).
   session.defaultSession.webRequest.onBeforeRequest((details, callback) => {

@@ -1,3 +1,37 @@
+## What's new in 0.2.0
+
+**A new name: Auria.** "Your Network. Secured." New eagle-and-shield logo on the app, the sign-in screen and the icon.
+
+**Two-step sign-in (2FA)**
+- Turn it on in **Settings → Security**: scan a QR code with Microsoft or Google Authenticator, then sign in with your password **and** a 6-digit code.
+- 10 one-time **recovery codes** in case you lose your phone (shown once, with Copy).
+- The setting is also kept inside the encrypted database, so editing files on disk can't switch it off.
+
+**Files**
+- Attach files to a firm, a person or a contract: PDF, Word, Excel, PowerPoint, images, TXT and CSV, up to 10 MB each. They're stored **inside the encrypted database**.
+- **Drop a file** into the Add file pop-up, or choose one from Finder / File Explorer.
+- Add files while **adding or editing a contact or a contract**.
+- Each file says who or what it's about. A person's profile lists every file about them, including people who aren't with a firm.
+- Images and text files open inside the app. For anything else, **Save a copy…** (the app warns that the copy isn't encrypted).
+
+**Contacts**
+- Prefix, middle name and suffix ("Dr. Marcus James Hale III"). Search finds middle names too.
+- Notes show **bold**, *italic* and bullet lists as you type.
+
+**Your data**
+- **Settings → Your data** shows where your data is saved. **Move…** puts it in another folder, for example on a USB drive.
+
+**Easier to use**
+- Add and edit forms open as centered pop-ups. Closing one with unsaved changes asks: Save changes, Discard changes, or Keep editing.
+- In a form, **Enter** confirms a field; **Enter again** saves (Cmd/Ctrl+Enter saves straight away).
+- **Customize Home:** drag cards, hide them, add them back, or reset the layout.
+- The sidebar folds away (Cmd/Ctrl+B). **Lock** sits above Settings (Cmd/Ctrl+L).
+- Fixed: the ⋯ menu was cut off at the bottom of tables, so Archive couldn't be reached.
+
+## Updating from 0.1
+
+Install over your current copy. Your contacts and password carry over: the app moves your data from the old "Contractor CRM" folder to "Auria" the first time it opens, and upgrades it when you sign in. After that, version 0.1 can't open the upgraded data, so keep using 0.2.
+
 ## Download
 
 | Your computer | Download |

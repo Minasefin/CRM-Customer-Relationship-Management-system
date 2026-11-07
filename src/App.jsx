@@ -8,6 +8,7 @@ import HomePage from './pages/HomePage.jsx';
 import ConfirmDialog from './components/ConfirmDialog.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import ContactForm from './components/ContactForm.jsx';
+import { readBase64 } from './components/FileSection.jsx';
 import OrgForm from './components/OrgForm.jsx';
 import ContractForm from './components/ContractForm.jsx';
 import { OrganizationsPage, ContractsPage, ArchivedPage } from './pages/OtherPages.jsx';
@@ -139,15 +140,32 @@ export default function App({ exploring = false, canLock = false }) {
   // Which form panel is open: { kind: 'contact' | 'org' | 'contract', id, contactId? } (null id = adding new)
   const [form, setForm] = useState(null);
 
-  const saveContact = async (values, { moved }) => {
-    if (form.id) {
-      await api.updateContact(form.id, values);
-      if (moved) await api.moveContact(form.id, values.orgId);
+  const saveContact = async (values, { moved, files = [] }) => {
+    let id = form.id;
+    if (id) {
+      await api.updateContact(id, values);
+      if (moved) await api.moveContact(id, values.orgId);
     } else {
-      const created = await api.createContact(values);
-      setOpenId(created.id);
+      id = (await api.createContact(values)).id;
+      setOpenId(id);
     }
+    // Files picked in the form: about this person, kept with their firm (or none if independent).
+    await addFiles(files, (body) => api.addContactAttachment(id, body));
     await load();
+  };
+
+  // Adds files picked in a form after the record itself saved. The record is already saved,
+  // so a file that fails is reported (by name), not retried.
+  const addFiles = async (files, add) => {
+    const failed = [];
+    for (const { file, mimeType } of files) {
+      try {
+        await add({ name: file.name, mimeType, dataBase64: await readBase64(file) });
+      } catch (e) {
+        failed.push(`${file.name} (${errorText(e)})`);
+      }
+    }
+    if (failed.length) setToast(`Saved, but couldn't add ${failed.join(', ')}.`);
   };
 
   const createOrg = async (values) => {
@@ -162,9 +180,9 @@ export default function App({ exploring = false, canLock = false }) {
     await load();
   };
 
-  const saveContract = async (values) => {
-    if (form.id) await api.updateContract(form.id, values);
-    else await api.createContract(values);
+  const saveContract = async (values, { files = [] } = {}) => {
+    const id = form.id ? (await api.updateContract(form.id, values), form.id) : (await api.createContract(values)).id;
+    await addFiles(files, (body) => api.addContractAttachment(id, body));
     await load();
   };
 

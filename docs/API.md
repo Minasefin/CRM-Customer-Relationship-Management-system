@@ -126,10 +126,15 @@ The existing getContacts/getContact responses supply these fields for UI search 
 - archiveOrganizationAttachment(id, archived = true) -> Attachment
 - linkOrganizationAttachment(id, { contactId, contractId }) -> Attachment (null or omitted = not about anyone; the whole firm)
 - getContactAttachments(contactId) -> Attachment[] (files about this person, from any firm; includes archived)
+- addContactAttachment(contactId, { name, mimeType, dataBase64 }) -> Attachment (about this person; kept with their current firm, or orgId null if they're independent)
+- addContractAttachment(contractId, { name, mimeType, dataBase64 }) -> Attachment (kept with the contract's firm, about its contractor, linked to the contract)
+- getContractAttachments(contractId) -> Attachment[] (includes archived)
+
+Database version 5: orgId is optional (null for an independent person's file). Every file belongs to a firm, a person, or both (enforced by the table). A file with no firm can't be unlinked from its person.
 
 addOrganizationAttachment also takes optional contactId and contractId. contractId must be one of the same firm's contracts. Database version 3 adds these two columns; version 1 and 2 databases upgrade on open.
 
-Attachment = { id, orgId, contactId, contractId, name, mimeType, size, createdAt, archived }.
+Attachment = { id, orgId, contactId, contractId, name, mimeType, size, createdAt, archived }. orgId may be null (version 5).
 size is decoded bytes. Each file must be 1 byte through 10 MiB. Content and metadata live inside the encrypted database; no plaintext attachment cache is created.
 Supported filename extensions/MIME pairs: PDF, PNG, JPEG, GIF, WebP, TXT, CSV, DOCX, XLSX and PPTX (see database/attachments.cjs for exact MIME strings).
 Base64 must be canonical. Filenames cannot contain paths/control characters. File types are metadata validation, not antivirus scanning; bytes are never automatically executed or opened.

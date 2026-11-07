@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Drawer from './Drawer.jsx';
 import { UnsavedDialog, SaveError, errorText } from './formBits.jsx';
 import RichTextArea from './RichTextArea.jsx';
+import { FormFiles } from './FileSection.jsx';
+import { api } from '../api/index.js';
 
 const toDateInput = (iso) => (iso ? iso.slice(0, 10) : '');
 const fromDateInput = (d) => (d ? new Date(`${d}T12:00:00`).toISOString() : null);
@@ -22,7 +24,13 @@ export default function ContractForm({ contract, contactId, contacts, organizati
   const [leaving, setLeaving] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
-  const dirty = JSON.stringify(form) !== JSON.stringify(start);
+  // Files picked here wait in the form and are added after it saves (App.saveContract).
+  const [newFiles, setNewFiles] = useState([]);
+  const [savedFiles, setSavedFiles] = useState([]);
+  useEffect(() => {
+    if (contract) api.getContractAttachments(contract.id).then((fs) => setSavedFiles(fs.filter((f) => !f.archived))).catch(() => {});
+  }, [contract?.id]);
+  const dirty = JSON.stringify(form) !== JSON.stringify(start) || newFiles.length > 0;
 
   const set = (k) => (e) => {
     setForm({ ...form, [k]: e.target.value });
@@ -58,7 +66,7 @@ export default function ContractForm({ contract, contactId, contacts, organizati
         start: fromDateInput(form.start),
         end: form.status === 'completed' ? fromDateInput(form.end) || new Date().toISOString() : fromDateInput(form.end),
         notes: form.notes.trim(),
-      });
+      }, { files: newFiles });
     } catch (err) {
       setSaving(false);
       return setSaveError(errorText(err));
@@ -144,6 +152,7 @@ export default function ContractForm({ contract, contactId, contacts, organizati
           />
         </div>
       </div>
+      <FormFiles saved={savedFiles} pending={newFiles} onChange={setNewFiles} who={form.title.trim() || 'this contract'} />
     </Drawer>
   );
 }

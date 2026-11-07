@@ -942,3 +942,30 @@ select:disabled { opacity: 0.7; cursor: not-allowed; }
 .person-files .file-open { gap: 10px; padding: 6px; }
 .person-files .file-badge { width: 34px; height: 28px; font-size: 9.5px; }
 .person-files .banner, .person-files .save-error { margin: 0 0 10px; }
+
+/* Two-step sign-in (2FA) */
+.pill { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; vertical-align: 1px; }
+.pill-on { background: #e3f5ec; color: #17784f; }
+.pill-off { background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
+:root[data-theme='dark'] .pill-on { background: rgba(30, 155, 108, 0.18); color: #6fd6a8; }
+.dialog.two-step { width: min(560px, calc(100vw - 48px)); }
+.dialog.two-step form > .muted, .dialog.two-step > .muted { margin: 0 0 14px; line-height: 1.5; }
+.dialog.two-step .field { margin-bottom: 8px; }
+.dialog.two-step .btn-row { margin-top: 16px; }
+.two-step-scan { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: start; margin: 4px 0 14px; }
+.qr { display: block; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
+.two-step-steps { margin: 0; padding-left: 18px; display: grid; gap: 8px; line-height: 1.45; color: var(--muted); }
+.two-step-steps strong { color: var(--ink); }
+.two-step-key { margin-top: 12px; font-size: 13px; }
+.two-step-key summary { cursor: pointer; color: var(--sky-strong); font-weight: 600; }
+.two-step-key code { display: block; margin: 8px 0 4px; padding: 8px 10px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); color: var(--ink); font-size: 13px; letter-spacing: 0.04em; overflow-wrap: anywhere; user-select: all; }
+.code-input { font-variant-numeric: tabular-nums; letter-spacing: 0.12em; font-size: 16px; }
+.recovery-codes { margin: 0 0 14px; padding: 12px 14px 12px 38px; display: grid; grid-template-columns: 1fr; gap: 5px; border-radius: var(--radius-ctl); background: var(--bg); border: 1px solid var(--line); }
+.recovery-codes li { color: var(--muted); font-size: 12px; }
+.recovery-codes code { color: var(--ink); font-size: 12.5px; user-select: all; }
+.recovery-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.check { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; }
+.check input { width: 16px; height: 16px; accent-color: var(--sky); }
+.auth-code { display: grid; gap: 4px; justify-items: start; }
+.auth-code .field { width: 100%; }
+@media (max-width: 560px) { .two-step-scan { grid-template-columns: 1fr; } }

@@ -918,3 +918,13 @@ select:disabled { opacity: 0.7; cursor: not-allowed; }
 .file-preview-body { margin: 12px 0 18px; max-height: min(62vh, 640px); overflow: auto; border: 1px solid var(--line); border-radius: var(--radius-ctl); background: var(--bg); display: grid; place-items: center; min-height: 120px; }
 .file-preview-body img { max-width: 100%; max-height: min(62vh, 640px); display: block; }
 .file-preview-body pre { align-self: start; justify-self: stretch; margin: 0; padding: 14px 16px; font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
+
+/* Settings → Your data: the folder path, and the move pop-up's list. */
+.data-folder { min-width: 0; }
+.data-folder-path { display: block; margin-top: 8px; padding: 6px 10px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); color: var(--ink); font-size: 12.5px; overflow-wrap: anywhere; user-select: text; }
+.move-data-list { margin: 4px 0 18px; padding-left: 20px; display: grid; gap: 8px; color: var(--muted); line-height: 1.45; }
+.move-data-list strong { color: var(--ink); }
+
+/* Contact form: prefix, middle name and suffix in one row under first/last name. */
+.name-extra { display: grid; grid-template-columns: 1fr 1.6fr 1fr; gap: 14px; }
+@media (max-width: 560px) { .name-extra { grid-template-columns: 1fr; } }

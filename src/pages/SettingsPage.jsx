@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useSettings } from '../hooks/useSettings.js';
 import PasswordField, { passwordLength } from '../components/PasswordField.jsx';
+import { errorText } from '../components/formBits.jsx';
 
 function Toggle({ id, checked, onChange, disabled }) {
   return (
@@ -92,6 +94,72 @@ const hours = Array.from({ length: 24 }, (_, h) => ({
   label: new Date(2000, 0, 1, h).toLocaleTimeString(undefined, { hour: 'numeric' }),
 }));
 
+// Where the encrypted database and its login file live (Adrian's #42). Moving them copies
+// both to an empty folder, checks the copy, and restarts the app. The renderer never
+// supplies a path: the folder is picked in the system's own dialog by the main process.
+function MoveDataDialog({ onClose }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const main = useRef(null);
+  useEffect(() => { main.current?.focus(); }, []);
+  const choose = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      const r = await window.crm.api.chooseStorageLocation();
+      if (r && r.canceled) setBusy(false);
+      // Otherwise the app restarts on its own and asks for the password.
+    } catch (e) {
+      setError(errorText(e));
+      setBusy(false);
+    }
+  };
+  const close = () => { if (!busy) onClose(); };
+  return createPortal(
+    <div className="dialog-root" onKeyDown={(e) => e.key === 'Escape' && close()}>
+      <div className="drawer-scrim" onClick={close} />
+      <div className="dialog dialog-wide move-data" role="dialog" aria-modal="true" aria-labelledby="move-data-title">
+        <h2 id="move-data-title">Move your data to another folder?</h2>
+        <ul className="move-data-list">
+          <li>Pick an <strong>empty</strong> folder, for example on a USB drive.</li>
+          <li>Auria copies the encrypted database and its login file there, checks the copy, then restarts. Sign in with the same password.</li>
+          <li>The old copy stays where it is as a backup. It still opens with today's password, so delete it yourself if you don't want it there.</li>
+          <li>If that drive isn't connected, Auria won't open until you plug it back in.</li>
+        </ul>
+        {error && <p className="save-error" role="alert">{error}</p>}
+        <div className="btn-row">
+          <button ref={main} className="btn-primary" onClick={choose} disabled={busy}>
+            {busy ? 'Waiting for a folder…' : 'Choose folder…'}
+          </button>
+          <button className="btn-ghost" onClick={close} disabled={busy}>Cancel</button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function DataFolder() {
+  const [dir, setDir] = useState('');
+  const [error, setError] = useState('');
+  const [moving, setMoving] = useState(false);
+  useEffect(() => {
+    window.crm.api.getStorageLocation().then((r) => setDir(r.directory)).catch((e) => setError(errorText(e)));
+  }, []);
+  return (
+    <div className="setting-row">
+      <div className="data-folder">
+        <span className="setting-label">Data folder</span>
+        <p className="muted small">The encrypted database and its login file are saved here.</p>
+        {dir && <code className="data-folder-path" title={dir}>{dir}</code>}
+        {error && <p className="save-error" role="alert">{error}</p>}
+      </div>
+      <button className="btn-ghost" onClick={() => setMoving(true)} disabled={!dir}>Move…</button>
+      {moving && <MoveDataDialog onClose={() => setMoving(false)} />}
+    </div>
+  );
+}
+
 function HourSelect({ value, onChange, disabled, label }) {
   return (
     <select aria-label={label} value={value} disabled={disabled} onChange={(e) => onChange(Number(e.target.value))}>
@@ -168,6 +236,20 @@ export default function SettingsPage({ theme, canLock = false }) {
             <span className="muted">days</span>
           </div>
         </div>
+      </section>
+
+      <section className="settings-group">
+        <h2>Your data</h2>
+        {canLock && window.crm?.api?.getStorageLocation ? (
+          <DataFolder />
+        ) : (
+          <div className="setting-row is-disabled">
+            <div>
+              <span className="setting-label">Data folder</span>
+              <p className="muted small">Available when you're signed in to your saved data. Sample data isn't saved anywhere.</p>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="settings-group">

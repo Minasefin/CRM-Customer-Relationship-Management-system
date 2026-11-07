@@ -14,8 +14,11 @@ export const organizations = [
 
 const c = (id, firstName, lastName, orgId, title, skills, status, createdDaysAgo, noteDays, extra = {}) => ({
   id,
+  prefix: extra.prefix ?? '',
   firstName,
+  middleName: extra.middleName ?? '',
   lastName,
+  suffix: extra.suffix ?? '',
   orgId,
   title,
   skills,
@@ -34,14 +37,15 @@ const c = (id, firstName, lastName, orgId, title, skills, status, createdDaysAgo
 export const contacts = [
   c('c-101', 'Marcus', 'Hale', 'org-1', 'Team lead', ['Demolitions', 'Close protection'], 'active', 400, [3, 40, 120], {
     address: '1200 Wilson Blvd, Arlington, VA 22209',
+    middleName: 'James',
     spouse: 'Renee Hale',
     children: ['Caleb', 'Ivy'],
     social: { x: '@mhale', instagram: '', snapchat: '', facebook: 'marcus.hale' },
   }),
   c('c-102', 'Dana', 'Whitfield', 'org-1', 'Medic', ['Combat medicine', 'Arabic'], 'active', 210, [18, 75]),
-  c('c-103', 'Ellis', 'Navarro', 'org-2', 'Pilot', ['Rotary wing', 'Night operations'], 'active', 300, [52, 160]),
+  c('c-103', 'Ellis', 'Navarro', 'org-2', 'Pilot', ['Rotary wing', 'Night operations'], 'active', 300, [52, 160], { prefix: 'Capt.' }),
   c('c-104', 'Priya', 'Raman', 'org-3', 'Logistics manager', ['Supply chain', 'Swahili'], 'active', 6, [6]),
-  c('c-105', 'Owen', 'Castellano', 'org-4', 'Security consultant', ['Risk assessment', 'Demolitions'], 'active', 500, [130, 260]),
+  c('c-105', 'Owen', 'Castellano', 'org-4', 'Security consultant', ['Risk assessment', 'Demolitions'], 'active', 500, [130, 260], { suffix: 'Jr.' }),
   c('c-106', 'Tessa', 'Moreau', 'org-2', 'Intelligence analyst', ['French', 'Signals'], 'active', 12, [11]),
   c('c-107', 'Jamal', 'Okafor', 'org-3', 'Driver', ['Defensive driving', 'Vehicle repair'], 'active', 150, [95]),
   c('c-108', 'Lena', 'Brandt', 'org-4', 'Trainer', ['Firearms instruction', 'German'], 'active', 3, []),

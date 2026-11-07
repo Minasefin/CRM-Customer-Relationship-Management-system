@@ -4,6 +4,7 @@ import { availability } from '../lib/availability.js';
 import { useData, useActions } from '../lib/dataContext.js';
 import MoreMenu from './MoreMenu.jsx';
 import { usePins } from '../lib/pins.js';
+import { formalName, shortName } from '../lib/names.js';
 
 const statusLabels = { active: 'Mark active', inactive: 'Mark left / inactive', deceased: 'Mark deceased' };
 
@@ -55,7 +56,7 @@ export default function ContactCard({ contact, org, onOpen }) {
       className={'contact-card' + (archived ? ' is-archived' : '')}
       tabIndex={0}
       role="button"
-      aria-label={`Open ${contact.firstName} ${contact.lastName}`}
+      aria-label={`Open ${formalName(contact)}`}
       onClick={open}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -64,10 +65,10 @@ export default function ContactCard({ contact, org, onOpen }) {
         }
       }}
     >
-      {actions.editContact && <MoreMenu items={menu} label={`Actions for ${contact.firstName} ${contact.lastName}`} />}
+      {actions.editContact && <MoreMenu items={menu} label={`Actions for ${shortName(contact)}`} />}
       <Avatar contact={contact} f={f} />
       <h3 className="contact-name">
-        {contact.firstName} {contact.lastName}
+        {formalName(contact)}
       </h3>
       <p className="contact-role">
         {contact.title}

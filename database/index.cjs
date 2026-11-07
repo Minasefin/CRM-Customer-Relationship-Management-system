@@ -129,7 +129,11 @@ function createDatabase(filename) {
           candidate.transaction(()=>candidate.exec(fs.readFileSync(path.join(__dirname,'migrations','004-app-meta.sql'),'utf8')))();
           version=4;
         }
-        if(version!==4) fail('Unsupported database version.');
+        if(version===4) {
+          candidate.transaction(()=>candidate.exec(fs.readFileSync(path.join(__dirname,'migrations','005-person-files.sql'),'utf8')))();
+          version=5;
+        }
+        if(version!==5) fail('Unsupported database version.');
         db=candidate;
         return {ok:true};
       } catch { candidate?.close(); fail('Unable to open database. Check the key and database version.'); }
@@ -170,10 +174,38 @@ function createDatabase(filename) {
       one('contacts',contactId);
       return rows('SELECT id,org_id,contact_id,contract_id,name,mime_type,size,created_at,archived FROM organization_attachments WHERE contact_id=? ORDER BY created_at,id',contactId).map(r=>shape('organization_attachments',r));
     },
+    // A file about one person, kept with their current firm (or with no firm if they're independent).
+    addContactAttachment(contactId,data) { obj(data);
+      const c=one('contacts',contactId);
+      if(c.orgId!==null) org(c.orgId);
+      const { validateAttachment }=require('./attachments.cjs');
+      const file=validateAttachment(data);
+      const links=fileLinks(c.orgId,{contactId,contractId:data.contractId??null});
+      const id=randomUUID(), created_at=now();
+      put('organization_attachments',{id,org_id:c.orgId,...links,name:file.name,mime_type:file.mimeType,size:file.bytes.length,data:file.bytes,created_at,archived:0});
+      return shape('organization_attachments',{id,org_id:c.orgId,...links,name:file.name,mime_type:file.mimeType,size:file.bytes.length,created_at,archived:0});
+    },
+    // A file for one contract: kept with the contract's firm (if any), about its contractor.
+    addContractAttachment(contractId,data) { obj(data);
+      const k=one('contracts',contractId);
+      if(k.orgId!==null) org(k.orgId);
+      const { validateAttachment }=require('./attachments.cjs');
+      const file=validateAttachment(data);
+      const links=fileLinks(k.orgId,{contactId:k.contactId,contractId});
+      const id=randomUUID(), created_at=now();
+      put('organization_attachments',{id,org_id:k.orgId,...links,name:file.name,mime_type:file.mimeType,size:file.bytes.length,data:file.bytes,created_at,archived:0});
+      return shape('organization_attachments',{id,org_id:k.orgId,...links,name:file.name,mime_type:file.mimeType,size:file.bytes.length,created_at,archived:0});
+    },
+    getContractAttachments(contractId) {
+      one('contracts',contractId);
+      return rows('SELECT id,org_id,contact_id,contract_id,name,mime_type,size,created_at,archived FROM organization_attachments WHERE contract_id=? ORDER BY created_at,id',contractId).map(r=>shape('organization_attachments',r));
+    },
     // Change who/what a file is about. null = the whole firm.
     linkOrganizationAttachment(id,d) { obj(d);
       const row=one('organization_attachments',id);
-      run('UPDATE organization_attachments SET contact_id=?,contract_id=? WHERE id=?',...Object.values(fileLinks(row.orgId,d)),id);
+      const links=fileLinks(row.orgId,d);
+      if(row.orgId===null&&links.contact_id===null) fail("This file isn't kept with a firm, so it has to be about someone.");
+      run('UPDATE organization_attachments SET contact_id=?,contract_id=? WHERE id=?',...Object.values(links),id);
       const {data,...metadata}=one('organization_attachments',id);
       return metadata;
     },

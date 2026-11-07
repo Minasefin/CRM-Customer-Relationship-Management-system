@@ -26,6 +26,16 @@ const fail = (message) => {
 };
 const find = (list, id) => list.find((y) => y.id === id) || fail('Record not found.');
 
+// Adds a sample file (same rules as the database: a firm, a person, or both).
+const addMockFile = (orgId, { name, mimeType, dataBase64, contactId = null, contractId = null }) => {
+  if (orgId !== null && find(mock.organizations, orgId).archived) fail('Restore the organization before assigning records.');
+  checkFileLinks(orgId, contactId, contractId);
+  const size = Math.floor((dataBase64.length * 3) / 4) - (dataBase64.endsWith('==') ? 2 : dataBase64.endsWith('=') ? 1 : 0);
+  const a = { id: newId('a'), orgId, contactId, contractId, name, mimeType, size, createdAt: now(), archived: false, dataBase64 };
+  mock.attachments.push(a);
+  const { dataBase64: _, ...meta } = a;
+  return copy(meta);
+};
 // A file can be about one person and/or one of the same firm's contracts (same rules as the database).
 const checkFileLinks = (orgId, contactId, contractId) => {
   if (contactId !== null) find(mock.contacts, contactId);
@@ -73,10 +83,25 @@ export const api = real || {
     find(mock.contacts, contactId);
     return copy(mock.attachments.filter((a) => a.contactId === contactId).map(({ dataBase64, ...meta }) => meta));
   },
+  // A file about one person, kept with their current firm (or no firm if they're independent).
+  async addContactAttachment(contactId, data) {
+    const c = find(mock.contacts, contactId);
+    return addMockFile(c.orgId, { ...data, contactId });
+  },
+  // A file for one contract: kept with the contract's firm (if any), about its contractor.
+  async addContractAttachment(contractId, data) {
+    const k = find(mock.contracts, contractId);
+    return addMockFile(k.orgId, { ...data, contactId: k.contactId, contractId });
+  },
+  async getContractAttachments(contractId) {
+    find(mock.contracts, contractId);
+    return copy(mock.attachments.filter((a) => a.contractId === contractId).map(({ dataBase64, ...meta }) => meta));
+  },
   // Change who/what a file is about. null = the whole firm.
   async linkOrganizationAttachment(id, { contactId = null, contractId = null } = {}) {
     const a = find(mock.attachments, id);
     checkFileLinks(a.orgId, contactId, contractId);
+    if (a.orgId === null && contactId === null) fail("This file isn't kept with a firm, so it has to be about someone.");
     Object.assign(a, { contactId, contractId });
     const { dataBase64, ...meta } = a;
     return copy(meta);

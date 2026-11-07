@@ -226,11 +226,13 @@ try {
     writeFileSync(src, 'Synthetic roster\nLine two\n');
     await nav(page, 'Organizations');
     await page.getByText('Ironclad Security Group').first().click();
+    // Add file opens the drop box; choosing a file goes through the system picker (here: setInputFiles).
+    await page.locator('.firm-files .section-head').getByRole('button', { name: 'Add file' }).click();
+    await page.locator('.dialog .dropzone').waitFor();
     await page.getByLabel('Choose a file to add').setInputFiles(src);
     // Who is it about? Marcus Hale (a person at this firm).
-    await page.getByRole('heading', { name: 'Who is this file about?' }).waitFor();
     await page.locator('.dialog').getByLabel('Person').selectOption({ label: 'Marcus Hale' });
-    await page.locator('.dialog').getByRole('button', { name: 'Add file' }).click();
+    await page.locator('.dialog').getByRole('button', { name: 'Add file', exact: true }).click();
     await page.locator('.firm-files .banner', { hasText: 'Added synthetic-roster.txt.' }).waitFor();
     await page.locator('.firm-files .file-row', { hasText: 'synthetic-roster.txt' }).locator('.file-about', { hasText: 'Marcus Hale' }).waitFor();
     const org = (await call('getOrganizations')).find((o) => o.name === 'Ironclad Security Group');
@@ -262,6 +264,37 @@ try {
     await page.getByRole('button', { name: 'Archive synthetic-roster.txt' }).click();
     await page.locator('.firm-files .banner', { hasText: 'Archived synthetic-roster.txt.' }).waitFor();
     assert.equal((await call('getOrganizationAttachments', org.id)).find((a) => a.id === meta.id).archived, true);
+  });
+
+  await step('contract and contact forms: a file picked in the form is saved with the record', async () => {
+    const src = path.join(DATA_DIR, 'synthetic-scope.txt');
+    writeFileSync(src, 'Synthetic scope of work');
+    // Contract form
+    await nav(page, 'Contracts');
+    await page.getByText('Site security detail').first().click();
+    const d = drawer(page);
+    await d.getByRole('button', { name: 'Add file' }).click();
+    await page.getByLabel('Choose a file to add').setInputFiles(src);
+    await page.locator('.dialog').getByRole('button', { name: 'Add', exact: true }).click();
+    await d.locator('.form-files', { hasText: 'synthetic-scope.txt' }).waitFor();
+    await d.locator('button.btn-primary').last().click();
+    await d.waitFor({ state: 'detached' });
+    const k = (await call('getContracts')).find((c) => c.title === 'Site security detail');
+    await page.waitForFunction(async (id) => (await window.crm.api.getContractAttachments(id)).some((a) => a.name === 'synthetic-scope.txt'), k.id);
+    const [kf] = (await call('getContractAttachments', k.id)).filter((a) => a.name === 'synthetic-scope.txt');
+    assert.equal(kf.contactId, k.contactId);
+
+    // Contact form (Testa Endtoend), then the profile lists it
+    await nav(page, 'Contacts');
+    await page.getByPlaceholder('Search by name').fill('Endtoend');
+    await page.getByRole('button', { name: 'Open Testa Endtoend' }).click();
+    await page.locator('.profile-head').getByRole('button', { name: 'Edit' }).click();
+    await d.getByRole('button', { name: 'Add file' }).click();
+    await page.getByLabel('Choose a file to add').setInputFiles(src);
+    await page.locator('.dialog').getByRole('button', { name: 'Add', exact: true }).click();
+    await d.locator('button.btn-primary').last().click();
+    await page.locator('.person-files .file-row', { hasText: 'synthetic-scope.txt' }).waitFor();
+    assert.ok((await call('getContactAttachments', testId)).some((a) => a.name === 'synthetic-scope.txt'));
   });
 
   await step('mark a person left / inactive', async () => {

@@ -39,7 +39,7 @@ const badge = (name) => LABELS[extOf(name).slice(1)] || 'FILE';
 export const fileSize = (n) =>
   n < 1024 ? `${n} B` : n < 1024 * 1024 ? `${Math.round(n / 1024)} KB` : `${(n / (1024 * 1024)).toFixed(1)} MB`;
 
-function readBase64(file) {
+export function readBase64(file) {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(String(r.result).slice(String(r.result).indexOf(',') + 1));
@@ -54,7 +54,8 @@ function Dialog({ title, children, onClose, wide, label }) {
     box.current?.querySelector('.btn-primary')?.focus();
   }, []);
   return createPortal(
-    <div className="dialog-root" onKeyDown={(e) => e.key === 'Escape' && onClose()}>
+    // Keys stay inside the pop-up (it can sit on top of a form that saves on Enter / closes on Esc).
+    <div className="dialog-root" onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') onClose(); }}>
       <div className="drawer-scrim" onClick={onClose} />
       <div ref={box} className={'dialog dialog-wide' + (wide ? ' file-preview' : '')} role="dialog" aria-modal="true" aria-label={label || title}>
         <h2>{title}</h2>
@@ -186,6 +187,170 @@ function AboutDialog({ title, fileName, people, contracts, value, confirm, onCon
 
 // mode 'firm':   every file kept with `org`, each labelled with who/what it's about.
 // mode 'person': every file about `contact`, from any firm (a compact panel on the profile).
+// Problem with a picked file, or '' if it can be added. Same rules as the database.
+export function fileProblem(file) {
+  if (!TYPES[extOf(file.name)]) return `${file.name} can't be added. Use a PDF, Word, Excel or PowerPoint file, an image (PNG, JPEG, GIF, WebP), or a TXT or CSV file.`;
+  if (!file.size) return `${file.name} is empty.`;
+  if (file.size > MAX) return `${file.name} is ${fileSize(file.size)}. Files can be up to 10 MB.`;
+  return '';
+}
+export const fileType = (name) => TYPES[extOf(name)];
+
+// Add a file: drop it in (or "Choose a file…" opens Finder / File Explorer), say who it's
+// about, then Add file. about={false} skips the who/what question (e.g. in a contact's form).
+export function AddFileDialog({ title = 'Add a file', people = [], contracts = [], value = {}, about = true, confirm = 'Add file', note, onAdd, onClose }) {
+  const [picked, setPicked] = useState(null); // { file, mimeType }
+  const [contactId, setContactId] = useState(value.contactId || '');
+  const [contractId, setContractId] = useState(value.contractId || '');
+  const [over, setOver] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const input = useRef(null);
+  const choose = () => input.current?.click();
+  const take = (file) => {
+    if (!file) return;
+    const problem = fileProblem(file);
+    setError(problem);
+    if (!problem) setPicked({ file, mimeType: fileType(file.name) });
+  };
+  const drop = (e) => {
+    e.preventDefault();
+    setOver(false);
+    const list = e.dataTransfer?.files;
+    if (list && list.length > 1) return setError('Add one file at a time.');
+    take(list?.[0]);
+  };
+  const pickContract = (id) => {
+    setContractId(id);
+    const k = contracts.find((c) => c.id === id);
+    if (k && !contactId && people.some((p) => p.id === k.contactId)) setContactId(k.contactId);
+  };
+  const go = async () => {
+    if (!picked) return setError('Choose a file first.');
+    setBusy(true);
+    setError('');
+    try {
+      await onAdd(picked, { contactId: contactId || null, contractId: contractId || null });
+    } catch (e) {
+      setError(errorText(e));
+      setBusy(false);
+    }
+  };
+  const close = () => !busy && onClose();
+  return (
+    <Dialog title={title} onClose={close}>
+      <div
+        className={'dropzone' + (over ? ' is-over' : '') + (picked ? ' has-file' : '')}
+        onDragEnter={(e) => { e.preventDefault(); setOver(true); }}
+        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; setOver(true); }}
+        onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setOver(false); }}
+        onDrop={drop}
+        onClick={() => !picked && !busy && choose()}
+        onKeyDown={(e) => { if (!picked && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); choose(); } }}
+        role={picked ? undefined : 'button'}
+        tabIndex={picked ? undefined : 0}
+        aria-label={picked ? undefined : 'Drop a file here, or choose a file'}
+      >
+        {picked ? (
+          <div className="dropzone-file">
+            <span className={'file-badge file-' + badge(picked.file.name).toLowerCase()} aria-hidden="true">{badge(picked.file.name)}</span>
+            <span className="file-text">
+              <span className="file-name">{picked.file.name}</span>
+              <span className="file-about">{fileSize(picked.file.size)}</span>
+            </span>
+            <button type="button" className="link-btn" onClick={(e) => { e.stopPropagation(); choose(); }} disabled={busy}>Choose a different file</button>
+          </div>
+        ) : (
+          <>
+            <span className="dropzone-icon" aria-hidden="true"><Icon name="save" size={22} /></span>
+            <strong>{over ? 'Drop it here' : 'Drop a file here'}</strong>
+            <span className="muted">or</span>
+            <span className="btn-ghost dropzone-choose">Choose a file…</span>
+            <small className="muted">PDF, Word, Excel, PowerPoint, images, TXT or CSV · up to 10 MB</small>
+          </>
+        )}
+      </div>
+      <input ref={input} type="file" accept={ACCEPT} hidden onChange={(e) => { take(e.target.files?.[0]); e.target.value = ''; }} aria-label="Choose a file to add" />
+      <p className="dropzone-lock"><Icon name="lock" size={14} /> {note || 'Stored encrypted inside Auria, with the rest of your data.'}</p>
+      {about && (
+        <div className="file-about-fields">
+          <label className="field">
+            <span>Person</span>
+            <select value={contactId} onChange={(e) => setContactId(e.target.value)} disabled={busy}>
+              <option value="">Nobody in particular</option>
+              {people.map((p) => <option key={p.id} value={p.id}>{shortName(p)}</option>)}
+            </select>
+          </label>
+          <label className="field">
+            <span>Contract</span>
+            <select value={contractId} onChange={(e) => pickContract(e.target.value)} disabled={busy}>
+              <option value="">No contract</option>
+              {contracts.map((k) => <option key={k.id} value={k.id}>{k.title}</option>)}
+            </select>
+          </label>
+        </div>
+      )}
+      {error && <p className="save-error" role="alert">{error}</p>}
+      <div className="btn-row">
+        <button className="btn-primary" onClick={go} disabled={busy || !picked}>{busy ? 'Adding…' : confirm}</button>
+        <button className="btn-ghost" onClick={close} disabled={busy}>Cancel</button>
+      </div>
+    </Dialog>
+  );
+}
+
+// The Files part of the contact and contract forms. Files picked here wait in the form
+// (`pending`) and are added after the form saves, so Cancel / Discard still drop them.
+export function FormFiles({ saved = [], pending, onChange, who }) {
+  const [adding, setAdding] = useState(false);
+  return (
+    <section className="form-section">
+      <h3>Files</h3>
+      {saved.length > 0 && (
+        <ul className="form-files">
+          {saved.map((f) => (
+            <li key={f.id}>
+              <span className={'file-badge file-' + badge(f.name).toLowerCase()} aria-hidden="true">{badge(f.name)}</span>
+              <span className="form-file-name">{f.name}</span>
+              <span className="muted small">{fileSize(f.size)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {pending.length > 0 && (
+        <ul className="form-files">
+          {pending.map((f, i) => (
+            <li key={i} className="is-new">
+              <span className={'file-badge file-' + badge(f.file.name).toLowerCase()} aria-hidden="true">{badge(f.file.name)}</span>
+              <span className="form-file-name">{f.file.name}</span>
+              <span className="muted small">{fileSize(f.file.size)} · added when you save</span>
+              <button type="button" className="icon-btn" aria-label={`Remove ${f.file.name}`} onClick={() => onChange(pending.filter((_, j) => j !== i))}>
+                <Icon name="trash" size={16} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <button type="button" className="link-btn" onClick={() => setAdding(true)}>
+        <Icon name="plus" size={14} /> Add file
+      </button>
+      {adding && (
+        <AddFileDialog
+          title={who ? `Add a file to ${who}` : 'Add a file'}
+          about={false}
+          confirm="Add"
+          note="Stored encrypted inside Auria when you save."
+          onAdd={(picked) => {
+            onChange([...pending, picked]);
+            setAdding(false);
+          }}
+          onClose={() => setAdding(false)}
+        />
+      )}
+    </section>
+  );
+}
+
 export default function FileSection({ mode = 'firm', org, contact, contacts = [], contracts = [], employment = [], orgsById = {} }) {
   const [files, setFiles] = useState(null);
   const [error, setError] = useState('');
@@ -193,15 +358,15 @@ export default function FileSection({ mode = 'firm', org, contact, contacts = []
   const [showArchived, setShowArchived] = useState(false);
   const [preview, setPreview] = useState(null);
   const [saving, setSaving] = useState(null);
-  const [pending, setPending] = useState(null); // a picked file waiting for "who is it about?"
+  const [adding, setAdding] = useState(false); // the Add file pop-up
   const [linking, setLinking] = useState(null); // a saved file whose link is being changed
-  const input = useRef(null);
   const person = mode === 'person';
   const key = person ? contact.id : org.id;
 
   // New files are kept with this firm (on a profile: the person's current firm).
-  const addOrg = person ? orgsById[contact.orgId] : org;
-  const canAdd = !!addOrg && !addOrg.archived && !(person && contact.status !== 'active');
+  // On a profile, new files are about this person, kept with their current firm (or none).
+  const addOrg = person ? orgsById[contact.orgId] || null : org;
+  const canAdd = person ? !addOrg?.archived : !org.archived;
 
   const byId = Object.fromEntries(contacts.map((c) => [c.id, c]));
   const contractsById = Object.fromEntries(contracts.map((k) => [k.id, k]));
@@ -214,7 +379,7 @@ export default function FileSection({ mode = 'firm', org, contact, contacts = []
   });
   const about = (f) => {
     const k = f.contractId && contractsById[f.contractId];
-    if (person) return [orgsById[f.orgId]?.name, k?.title].filter(Boolean).join(' · ');
+    if (person) return [f.orgId ? orgsById[f.orgId]?.name : 'No firm', k?.title].filter(Boolean).join(' · ');
     const p = f.contactId && byId[f.contactId];
     return [p && shortName(p), k?.title].filter(Boolean).join(' · ') || 'Whole firm';
   };
@@ -227,30 +392,24 @@ export default function FileSection({ mode = 'firm', org, contact, contacts = []
     setFiles(null);
     setError('');
     setFlash('');
-    load();
   }, [key]);
+  // Reload whenever the app reloads its data (e.g. after a form saved files for this person),
+  // keeping the current list on screen until the new one arrives.
+  const record = person ? contact : org;
+  useEffect(() => {
+    load();
+  }, [record]);
   useEffect(() => {
     if (!flash) return;
     const t = setTimeout(() => setFlash(''), 5000);
     return () => clearTimeout(t);
   }, [flash]);
 
-  const pick = (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    setError('');
-    setFlash('');
-    const mimeType = TYPES[extOf(file.name)];
-    if (!mimeType) return setError(`${file.name} can't be added. Use a PDF, Word, Excel or PowerPoint file, an image (PNG, JPEG, GIF, WebP), or a TXT or CSV file.`);
-    if (!file.size) return setError(`${file.name} is empty.`);
-    if (file.size > MAX) return setError(`${file.name} is ${fileSize(file.size)}. Files can be up to 10 MB.`);
-    setPending({ file, mimeType });
-  };
-  const add = async (links) => {
-    const { file, mimeType } = pending;
-    await api.addOrganizationAttachment(addOrg.id, { name: file.name, mimeType, dataBase64: await readBase64(file), ...links });
-    setPending(null);
+  const add = async ({ file, mimeType }, links) => {
+    const body = { name: file.name, mimeType, dataBase64: await readBase64(file) };
+    if (person) await api.addContactAttachment(contact.id, body);
+    else await api.addOrganizationAttachment(org.id, { ...body, ...links });
+    setAdding(false);
     await load();
     setFlash(`Added ${file.name}.`);
   };
@@ -306,9 +465,8 @@ export default function FileSection({ mode = 'firm', org, contact, contacts = []
     </li>
   );
 
-  const picker = canAdd && <input ref={input} type="file" accept={ACCEPT} hidden onChange={pick} aria-label="Choose a file to add" />;
   const empty = person
-    ? `No files about ${contact.firstName} yet.` + (addOrg ? '' : ' Files are kept with a firm, so add them from a firm page.')
+    ? `No files about ${contact.firstName} yet.`
     : `No files yet. ${org.archived ? 'Restore the firm to add files.' : "Add contracts, site photos or rosters, up to 10 MB each. They're stored encrypted."}`;
 
   return (
@@ -319,19 +477,18 @@ export default function FileSection({ mode = 'firm', org, contact, contacts = []
         <div className="section-head">
           <h2>Files</h2>
           {canAdd && (
-            <button className="btn-ghost" onClick={() => input.current?.click()} disabled={files === null}>
+            <button className="btn-ghost" onClick={() => { setFlash(''); setError(''); setAdding(true); }} disabled={files === null}>
               <Icon name="plus" size={15} /> Add file
             </button>
           )}
         </div>
       )}
-      {picker}
-      {flash && <p className="banner banner-ok" role="status">{flash}</p>}
+            {flash && <p className="banner banner-ok" role="status">{flash}</p>}
       {error && <p className="save-error" role="alert">{error}</p>}
       {files !== null && current.length === 0 && <p className={'muted' + (person ? ' small' : '')}>{empty}</p>}
       {current.length > 0 && <ul className="file-list">{current.map(row)}</ul>}
       {person && canAdd && (
-        <button className="link-btn add-under" onClick={() => input.current?.click()} disabled={files === null}>
+        <button className="link-btn add-under" onClick={() => { setFlash(''); setError(''); setAdding(true); }} disabled={files === null}>
           <Icon name="plus" size={14} /> Add file
         </button>
       )}
@@ -343,15 +500,13 @@ export default function FileSection({ mode = 'firm', org, contact, contacts = []
           {showArchived && <ul className="file-list">{archived.map(row)}</ul>}
         </>
       )}
-      {pending && (
-        <AboutDialog
-          title="Who is this file about?"
-          fileName={pending.file.name}
-          {...choices(addOrg.id, person ? { contactId: contact.id } : {})}
-          value={person ? { contactId: contact.id } : {}}
-          confirm="Add file"
-          onConfirm={add}
-          onClose={() => setPending(null)}
+      {adding && (
+        <AddFileDialog
+          title={person ? `Add a file about ${contact.firstName}` : `Add a file to ${org.name}`}
+          {...(person ? {} : choices(org.id))}
+          about={!person}
+          onAdd={add}
+          onClose={() => setAdding(false)}
         />
       )}
       {linking && (

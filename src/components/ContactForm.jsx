@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Drawer from './Drawer.jsx';
 import ImagePicker from './ImagePicker.jsx';
 import TagInput from './TagInput.jsx';
@@ -7,6 +7,8 @@ import { OrgFields } from './OrgForm.jsx';
 import { UnsavedDialog, sameName, SaveError, errorText } from './formBits.jsx';
 import { soundsLike } from '../lib/soundex.js';
 import { PREFIXES, SUFFIXES } from '../lib/names.js';
+import { FormFiles } from './FileSection.jsx';
+import { api } from '../api/index.js';
 
 const NEW_ORG = '__new';
 const phoneLabels = ['Mobile', 'Work', 'Home', 'Other'];
@@ -93,9 +95,15 @@ export default function ContactForm({ contact, organizations, contacts, onSave, 
   const [saveError, setSaveError] = useState('');
   // Prefix, middle name and suffix stay tucked away until asked for (or already filled in).
   const [moreName, setMoreName] = useState(!!(start.prefix || start.middleName || start.suffix));
+  // Files picked in this form wait here and are added after the contact saves (App.saveContact).
+  const [newFiles, setNewFiles] = useState([]);
+  const [savedFiles, setSavedFiles] = useState([]);
+  useEffect(() => {
+    if (contact) api.getContactAttachments(contact.id).then((fs) => setSavedFiles(fs.filter((f) => !f.archived))).catch(() => {});
+  }, [contact?.id]);
 
   const isEdit = !!contact;
-  const dirty = JSON.stringify(form) !== JSON.stringify(start) || form.orgId === NEW_ORG;
+  const dirty = JSON.stringify(form) !== JSON.stringify(start) || form.orgId === NEW_ORG || newFiles.length > 0;
   const set = (k) => (e) => {
     setForm({ ...form, [k]: e.target.value });
     setErrors({ ...errors, [k]: undefined });
@@ -160,7 +168,7 @@ export default function ContactForm({ contact, organizations, contacts, onSave, 
         // If the next step fails, a retry uses this firm instead of making it twice.
         setForm((f) => ({ ...f, orgId }));
       }
-      await onSave(clean(orgId), { moved: isEdit && (contact.orgId || '') !== orgId });
+      await onSave(clean(orgId), { moved: isEdit && (contact.orgId || '') !== orgId, files: newFiles });
     } catch (err) {
       setSaving(false);
       setStep('edit');
@@ -381,6 +389,8 @@ export default function ContactForm({ contact, organizations, contacts, onSave, 
           <TagInput id="skills" value={form.skills} onChange={(skills) => setForm({ ...form, skills })} suggestions={allSkills} placeholder="Type a skill and press Enter" />
         </label>
       </section>
+
+      <FormFiles saved={savedFiles} pending={newFiles} onChange={setNewFiles} who={form.firstName.trim() || 'this contact'} />
 
       <section className="form-section">
         <h3>Social media</h3>

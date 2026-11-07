@@ -71,7 +71,7 @@ function SaveCopyDialog({ file, onDone, onClose }) {
     setError('');
     try {
       const r = await api.saveAttachmentCopy(file.id);
-      if (r && r.ok) onDone(`Saved a copy of ${file.name}. That copy isn't encrypted.`);
+      if (r && r.ok) onDone(`Saved a copy of ${file.name}.`);
       else setBusy(false); // canceled in the save dialog
     } catch (e) {
       setError(errorText(e));
@@ -80,14 +80,11 @@ function SaveCopyDialog({ file, onDone, onClose }) {
   };
   const close = () => !busy && onClose();
   return (
-    <Dialog title="Save an unencrypted copy?" onClose={close}>
-      <p className="muted">
-        Auria keeps <strong>{file.name}</strong> encrypted. The copy you save is a normal file: anyone who
-        can open that folder can read it, and Auria can't lock or delete it.
-      </p>
+    <Dialog title="Save a copy?" onClose={close}>
+      <p className="muted">This copy won't be encrypted. Anyone who can open that folder can read it.</p>
       {error && <p className="save-error" role="alert">{error}</p>}
       <div className="btn-row">
-        <button className="btn-primary" onClick={save} disabled={busy}>{busy ? 'Waiting for a location…' : 'Choose where to save…'}</button>
+        <button className="btn-primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save…'}</button>
         <button className="btn-ghost" onClick={close} disabled={busy}>Cancel</button>
       </div>
     </Dialog>

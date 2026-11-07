@@ -215,13 +215,13 @@ try {
     await page.locator('.file-open', { hasText: 'synthetic-roster.txt' }).click();
     await page.locator('.file-preview-body pre', { hasText: 'Synthetic roster' }).waitFor();
     await page.locator('.dialog').getByRole('button', { name: 'Save a copy…' }).click();
-    await page.getByRole('heading', { name: 'Save an unencrypted copy?' }).waitFor();
+    await page.getByRole('heading', { name: 'Save a copy?' }).waitFor();
     // Stand in for the system save dialog (main process) so the test can pick the path.
     await app.evaluate(({ dialog }, file) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: file });
     }, out);
-    await page.getByRole('button', { name: 'Choose where to save…' }).click();
-    await page.locator('.firm-files .banner', { hasText: "That copy isn't encrypted." }).waitFor();
+    await page.getByRole('button', { name: 'Save…', exact: true }).click();
+    await page.locator('.firm-files .banner', { hasText: 'Saved a copy of synthetic-roster.txt.' }).waitFor();
     assert.equal(readFileSync(out, 'utf8'), 'Synthetic roster\nLine two\n');
 
     await page.getByRole('button', { name: 'Archive synthetic-roster.txt' }).click();

@@ -33,6 +33,16 @@ Checked against the real Electron app on Oct 26, 2026:
 3. **Treat everything from the page as untrusted.** Check types and lengths, and use parameterized SQL (`db.prepare('... WHERE id = ?').get(id)`), never string-building.
 4. **Never log passwords, keys, or contact data** to the console or a file.
 
+## Test database key (`npm run dev:db`)
+
+Until the login exists, developers open the database with a random test key:
+
+- `.dev-key` is created on your computer, gitignored, and blocked by `npm run check:secrets`. Never commit or share it.
+- The key reaches the app only through the `CRM_DEV_KEY` environment variable, and **the installed (packaged) app ignores it**, so it can't become a way around the login.
+- The test database is separate from the real one (`userData/dev/crm-dev.db`) and only ever holds made-up sample data.
+- The page never sees the key. Only the 19 data functions in `docs/API.md` are exposed; `openDatabase`, `closeDatabase` and `rekeyDatabase` stay in the main process.
+- The "App test (database)" check on every pull request opens the real app on an encrypted database with a throwaway key and clicks through it.
+
 ## Login and encryption (Nic, with Adrian)
 
 - The password is never stored. Derive the database key from it with `crypto.scrypt` and a random 16-byte salt. Store only the salt and a separate check value.
@@ -47,11 +57,18 @@ Checked against the real Electron app on Oct 26, 2026:
 - No delete functions for contacts, as designed.
 - If the client wants Social Security numbers stored, that field needs extra care: show it masked, and only reveal on request. Ask him first.
 
-## Before we ship (packaging step)
+## Installed app (packaging)
 
-- Turn off Electron "fuses" that let the app run as plain Node or accept debug flags: `RunAsNode`, `EnableNodeCliInspectArguments`, `EnableNodeOptionsEnvironmentVariable`. Turn on `EnableEmbeddedAsarIntegrityValidation` and `OnlyLoadAppFromAsar`.
-- Download the installer from GitHub and test it, the way the client will.
+- Electron "fuses" are set in `electron-builder.yml`: the installed app can't be run as plain Node, ignores debug flags and `NODE_OPTIONS`, only loads its own packaged code, and checks that code hasn't been tampered with. Verified on the Linux build on Oct 28, 2026.
+- The installed app ignores `VITE_DEV_SERVER_URL` and loads only its built-in files (verified on the packaged build).
+- Not signed with a paid certificate (Mac is ad-hoc signed so it runs on Apple Silicon). Users see a one-time warning; `build/Read Me First.html` explains it.
+- Always test by **downloading** the installer from GitHub, the way the client will. The warning only appears on downloaded files.
 
 ## Found a problem?
 
 Don't post details in a public place. Message the team on Teams and fix it in a pull request.
+
+## Custom data folders and attachments
+The default remains Electron userData/crm.db. The authenticated native folder picker can relocate crm.db together with auth.json to an empty directory; storage-location.json in userData records that location. Missing selected storage must never fall back to creating a fresh database.
+Attachments are encrypted BLOBs in crm.db, bounded to 10 MiB per file. No automatic external opening or plaintext export is provided.
+Relocation preserves the old encrypted database/auth pair as a recovery copy. It remains sensitive and retains the old credentials if the active password is later changed.

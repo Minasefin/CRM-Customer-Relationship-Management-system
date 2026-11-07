@@ -12,7 +12,7 @@ const { setupAuthBridge, disableAuthForDevelopmentDatabase } = require('./auth-b
 
 // The functions the screens may call. Key and lifecycle functions are never exposed.
 const UI_FUNCTIONS = [
-  'getOrganizationAttachments', 'addOrganizationAttachment', 'getOrganizationAttachment', 'archiveOrganizationAttachment',
+  'getOrganizationAttachments', 'addOrganizationAttachment', 'getOrganizationAttachment', 'archiveOrganizationAttachment', 'linkOrganizationAttachment', 'getContactAttachments',
   'getOrganizations', 'getOrganization', 'createOrganization', 'updateOrganization', 'archiveOrganization',
   'getContacts', 'getContact', 'createContact', 'updateContact', 'setContactStatus', 'moveContact',
   'getEmploymentHistory', 'getAllEmployment', 'addNote', 'updateNote',

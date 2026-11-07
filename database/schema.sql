@@ -35,3 +35,8 @@ CREATE TABLE organization_attachments (
 ) STRICT;
 CREATE INDEX attachments_org ON organization_attachments(org_id,created_at);
 PRAGMA user_version=2;
+
+ALTER TABLE organization_attachments ADD COLUMN contact_id TEXT REFERENCES contacts(id);
+ALTER TABLE organization_attachments ADD COLUMN contract_id TEXT REFERENCES contracts(id);
+CREATE INDEX attachments_contact ON organization_attachments(contact_id);
+PRAGMA user_version=3;

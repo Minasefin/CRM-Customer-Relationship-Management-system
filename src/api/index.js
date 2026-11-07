@@ -26,6 +26,12 @@ const fail = (message) => {
 };
 const find = (list, id) => list.find((y) => y.id === id) || fail('Record not found.');
 
+// A file can be about one person and/or one of the same firm's contracts (same rules as the database).
+const checkFileLinks = (orgId, contactId, contractId) => {
+  if (contactId !== null) find(mock.contacts, contactId);
+  if (contractId !== null && find(mock.contracts, contractId).orgId !== orgId) fail('That contract belongs to another organization.');
+};
+
 export const api = real || {
   // Organizations
   async getOrganizations() {
@@ -54,12 +60,25 @@ export const api = real || {
     find(mock.organizations, orgId);
     return copy(mock.attachments.filter((a) => a.orgId === orgId).map(({ dataBase64, ...meta }) => meta));
   },
-  async addOrganizationAttachment(orgId, { name, mimeType, dataBase64 }) {
+  async addOrganizationAttachment(orgId, { name, mimeType, dataBase64, contactId = null, contractId = null }) {
     const org = find(mock.organizations, orgId);
     if (org.archived) fail('Restore the organization before assigning records.');
-    const a = { id: newId('a'), orgId, name, mimeType, size: Math.floor((dataBase64.length * 3) / 4) - (dataBase64.endsWith('==') ? 2 : dataBase64.endsWith('=') ? 1 : 0), createdAt: now(), archived: false, dataBase64 };
+    checkFileLinks(orgId, contactId, contractId);
+    const a = { id: newId('a'), orgId, contactId, contractId, name, mimeType, size: Math.floor((dataBase64.length * 3) / 4) - (dataBase64.endsWith('==') ? 2 : dataBase64.endsWith('=') ? 1 : 0), createdAt: now(), archived: false, dataBase64 };
     mock.attachments.push(a);
     const { dataBase64: _, ...meta } = a;
+    return copy(meta);
+  },
+  async getContactAttachments(contactId) {
+    find(mock.contacts, contactId);
+    return copy(mock.attachments.filter((a) => a.contactId === contactId).map(({ dataBase64, ...meta }) => meta));
+  },
+  // Change who/what a file is about. null = the whole firm.
+  async linkOrganizationAttachment(id, { contactId = null, contractId = null } = {}) {
+    const a = find(mock.attachments, id);
+    checkFileLinks(a.orgId, contactId, contractId);
+    Object.assign(a, { contactId, contractId });
+    const { dataBase64, ...meta } = a;
     return copy(meta);
   },
   async getOrganizationAttachment(id) {

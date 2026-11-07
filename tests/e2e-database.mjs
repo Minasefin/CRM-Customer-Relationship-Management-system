@@ -227,10 +227,18 @@ try {
     await nav(page, 'Organizations');
     await page.getByText('Ironclad Security Group').first().click();
     await page.getByLabel('Choose a file to add').setInputFiles(src);
+    // Who is it about? Marcus Hale (a person at this firm).
+    await page.getByRole('heading', { name: 'Who is this file about?' }).waitFor();
+    await page.locator('.dialog').getByLabel('Person').selectOption({ label: 'Marcus Hale' });
+    await page.locator('.dialog').getByRole('button', { name: 'Add file' }).click();
     await page.locator('.firm-files .banner', { hasText: 'Added synthetic-roster.txt.' }).waitFor();
+    await page.locator('.firm-files .file-row', { hasText: 'synthetic-roster.txt' }).locator('.file-about', { hasText: 'Marcus Hale' }).waitFor();
     const org = (await call('getOrganizations')).find((o) => o.name === 'Ironclad Security Group');
+    const marcus = (await call('getContacts')).find((c) => c.firstName === 'Marcus' && c.lastName === 'Hale');
     const [meta] = (await call('getOrganizationAttachments', org.id)).filter((a) => a.name === 'synthetic-roster.txt');
     assert.equal(meta.mimeType, 'text/plain');
+    assert.equal(meta.contactId, marcus.id);
+    assert.ok((await call('getContactAttachments', marcus.id)).some((a) => a.id === meta.id));
 
     await page.locator('.file-open', { hasText: 'synthetic-roster.txt' }).click();
     await page.locator('.file-preview-body pre', { hasText: 'Synthetic roster' }).waitFor();
@@ -244,6 +252,13 @@ try {
     await page.locator('.firm-files .banner', { hasText: 'Saved a copy of synthetic-roster.txt.' }).waitFor();
     assert.equal(readFileSync(out, 'utf8'), 'Synthetic roster\nLine two\n');
 
+    // It also shows on Marcus's profile, then back to the firm to archive it.
+    await nav(page, 'Contacts');
+    await page.getByPlaceholder('Search by name').fill('Marcus');
+    await page.getByRole('button', { name: 'Open Marcus James Hale' }).click();
+    await page.locator('.person-files .file-row', { hasText: 'synthetic-roster.txt' }).waitFor();
+    await nav(page, 'Organizations');
+    await page.getByText('Ironclad Security Group').first().click();
     await page.getByRole('button', { name: 'Archive synthetic-roster.txt' }).click();
     await page.locator('.firm-files .banner', { hasText: 'Archived synthetic-roster.txt.' }).waitFor();
     assert.equal((await call('getOrganizationAttachments', org.id)).find((a) => a.id === meta.id).archived, true);

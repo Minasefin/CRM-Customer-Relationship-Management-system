@@ -29,7 +29,7 @@ const platforms = ['x', 'instagram', 'snapchat', 'facebook'];
 const mappings = {
   organizations: { created_at: 'createdAt' },
   contacts: { org_id:'orgId', first_name:'firstName', middle_name:'middleName', last_name:'lastName', created_at:'createdAt' },
-  organization_attachments: { org_id:'orgId', mime_type:'mimeType', created_at:'createdAt' },
+  organization_attachments: { org_id:'orgId', contact_id:'contactId', contract_id:'contractId', mime_type:'mimeType', created_at:'createdAt' },
   contracts: { contact_id:'contactId', org_id:'orgId', start_date:'start', end_date:'end' },
   employment_history: { contact_id:'contactId', org_id:'orgId', start_date:'start', end_date:'end' },
 };
@@ -84,6 +84,13 @@ function createDatabase(filename) {
   }
   const contactFields = d => ({first_name:str(d.firstName,200),middle_name:str(d.middleName,200),prefix:str(d.prefix,50),suffix:str(d.suffix,50),last_name:str(d.lastName,200),title:str(d.title,200),address:str(d.address),spouse:str(d.spouse,200),photo:image(d.photo)});
   const organizationFields = d => ({name:str(d.name,200),city:str(d.city,200),country:str(d.country,200),logo:image(d.logo)});
+  // A file can be about one person and/or one of the same firm's contracts; null = the whole firm.
+  const fileLinks = (orgId,d) => {
+    const contactId=d.contactId??null, contractId=d.contractId??null;
+    if(contactId!==null) one('contacts',contactId);
+    if(contractId!==null && one('contracts',contractId).orgId!==orgId) fail('That contract belongs to another organization.');
+    return {contact_id:contactId,contract_id:contractId};
+  };
   function contractFields(d) {
     one('contacts',d.contactId);
     if(d.orgId!==null) one('organizations',d.orgId);
@@ -114,7 +121,11 @@ function createDatabase(filename) {
           candidate.transaction(()=>candidate.exec(fs.readFileSync(path.join(__dirname,'migrations','002-names-attachments.sql'),'utf8')))();
           version=2;
         }
-        if(version!==2) fail('Unsupported database version.');
+        if(version===2) {
+          candidate.transaction(()=>candidate.exec(fs.readFileSync(path.join(__dirname,'migrations','003-file-links.sql'),'utf8')))();
+          version=3;
+        }
+        if(version!==3) fail('Unsupported database version.');
         db=candidate;
         return {ok:true};
       } catch { candidate?.close(); fail('Unable to open database. Check the key and database version.'); }
@@ -137,14 +148,27 @@ function createDatabase(filename) {
     archiveOrganization(id,archived=true) { one('organizations',id); run('UPDATE organizations SET archived=? WHERE id=?',flag(archived),id); return one('organizations',id); },
     getOrganizationAttachments(orgId) {
       one('organizations',orgId);
-      return rows('SELECT id,org_id,name,mime_type,size,created_at,archived FROM organization_attachments WHERE org_id=? ORDER BY created_at,id',orgId).map(r=>shape('organization_attachments',r));
+      return rows('SELECT id,org_id,contact_id,contract_id,name,mime_type,size,created_at,archived FROM organization_attachments WHERE org_id=? ORDER BY created_at,id',orgId).map(r=>shape('organization_attachments',r));
+    },
+    // Files about one person, from any firm (#41 follow-up).
+    getContactAttachments(contactId) {
+      one('contacts',contactId);
+      return rows('SELECT id,org_id,contact_id,contract_id,name,mime_type,size,created_at,archived FROM organization_attachments WHERE contact_id=? ORDER BY created_at,id',contactId).map(r=>shape('organization_attachments',r));
+    },
+    // Change who/what a file is about. null = the whole firm.
+    linkOrganizationAttachment(id,d) { obj(d);
+      const row=one('organization_attachments',id);
+      run('UPDATE organization_attachments SET contact_id=?,contract_id=? WHERE id=?',...Object.values(fileLinks(row.orgId,d)),id);
+      const {data,...metadata}=one('organization_attachments',id);
+      return metadata;
     },
     addOrganizationAttachment(orgId,data) { obj(data); org(orgId);
       const { validateAttachment }=require('./attachments.cjs');
       const file=validateAttachment(data);
+      const links=fileLinks(orgId,data);
       const id=randomUUID(), created_at=now();
-      put('organization_attachments',{id,org_id:orgId,name:file.name,mime_type:file.mimeType,size:file.bytes.length,data:file.bytes,created_at,archived:0});
-      return shape('organization_attachments',{id,org_id:orgId,name:file.name,mime_type:file.mimeType,size:file.bytes.length,created_at,archived:0});
+      put('organization_attachments',{id,org_id:orgId,...links,name:file.name,mime_type:file.mimeType,size:file.bytes.length,data:file.bytes,created_at,archived:0});
+      return shape('organization_attachments',{id,org_id:orgId,...links,name:file.name,mime_type:file.mimeType,size:file.bytes.length,created_at,archived:0});
     },
     getOrganizationAttachment(id) {
       const row=one('organization_attachments',id);

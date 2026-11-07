@@ -270,6 +270,8 @@ export default function App({ exploring = false, canLock = false }) {
                 org={orgsById[open.orgId]}
                 orgsById={orgsById}
                 contracts={data.contracts}
+                contacts={data.contacts}
+                employment={data.employment}
                 onBack={() => setOpenId(null)}
                 onEdit={() => setForm({ kind: 'contact', id: open.id })}
                 onAddNote={addNote}

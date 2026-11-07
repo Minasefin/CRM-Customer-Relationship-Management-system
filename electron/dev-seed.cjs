@@ -23,8 +23,11 @@ async function seedIfEmpty(db, file, key) {
 
   for (const c of mock.contacts) {
     const created = await db.createContact({
+      prefix: c.prefix || '',
       firstName: c.firstName,
+      middleName: c.middleName || '',
       lastName: c.lastName,
+      suffix: c.suffix || '',
       title: c.title || '',
       orgId: c.orgId ? orgIds[c.orgId] : null,
       photo: null,

@@ -112,6 +112,26 @@ try {
     assert.ok(testId);
   });
 
+  await step('add a prefix, middle name and suffix; the profile shows the full name', async () => {
+    await page.locator('.profile-head').getByRole('button', { name: 'Edit' }).click();
+    const d = drawer(page);
+    await d.getByRole('button', { name: 'Add prefix, middle name or suffix' }).click();
+    await d.getByLabel('Prefix').fill('Dr.');
+    await d.getByLabel('Middle name').fill('Quinn');
+    await d.getByLabel('Suffix').fill('III');
+    await d.locator('button.btn-primary').click();
+    await page.getByRole('heading', { name: 'Dr. Testa Quinn Endtoend III' }).waitFor();
+    const saved = await call('getContact', testId);
+    assert.deepEqual([saved.prefix, saved.middleName, saved.suffix], ['Dr.', 'Quinn', 'III']);
+    // Clear them again so the later steps find "Testa Endtoend".
+    await page.locator('.profile-head').getByRole('button', { name: 'Edit' }).click();
+    await d.getByLabel('Prefix').fill('');
+    await d.getByLabel('Middle name').fill('');
+    await d.getByLabel('Suffix').fill('');
+    await d.locator('button.btn-primary').click();
+    await page.getByRole('heading', { name: 'Testa Endtoend', exact: true }).waitFor();
+  });
+
   await step('add a note, then edit it: text changes, date stays', async () => {
     await page.getByLabel('New note about Testa').fill('First call about the Erbil job.');
     await page.getByRole('button', { name: 'Save note' }).click();
@@ -210,11 +230,11 @@ try {
     assert.equal((await call('getContact', testId)).status, 'inactive');
   });
 
-  await step('search "Markus Hail" finds Marcus Hale (sounds-like)', async () => {
+  await step('search "Markus Hail" finds Marcus James Hale (sounds-like; middle name from the database)', async () => {
     await page.getByRole('button', { name: /Back/ }).click();
     await nav(page, 'Contacts');
     await page.getByPlaceholder('Search by name').fill('Markus Hail');
-    await page.getByRole('button', { name: 'Open Marcus Hale' }).waitFor();
+    await page.getByRole('button', { name: 'Open Marcus James Hale' }).waitFor();
   });
 
   await app.close();

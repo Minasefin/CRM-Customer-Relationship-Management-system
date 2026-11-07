@@ -40,13 +40,13 @@ export default function ContactsPage({ contacts, orgsById, onOpen, onAdd }) {
     return filter === 'overdue' ? l === 'overdue' || l === 'never' : l === filter;
   });
   const exact = (c) => {
-    const hay = [c.firstName, c.lastName, c.title, c.orgId ? orgsById[c.orgId]?.name : 'Independent', ...c.skills].join(' ').toLowerCase();
+    const hay = [c.prefix, c.firstName, c.middleName, c.lastName, c.suffix, c.title, c.orgId ? orgsById[c.orgId]?.name : 'Independent', ...c.skills].join(' ').toLowerCase();
     return hay.includes(q);
   };
   // Soundex: names that sound like what was typed ("Smyth" finds "Smith").
-  // Every typed word has to sound like the person's first or last name.
+  // Every typed word has to sound like the person's first, middle or last name.
   const words = q.split(/\s+/).filter((w) => /[a-z]/.test(w));
-  const soundAlike = (c) => words.length > 0 && words.every((w) => soundsLike(w, c.firstName) || soundsLike(w, c.lastName));
+  const soundAlike = (c) => words.length > 0 && words.every((w) => soundsLike(w, c.firstName) || soundsLike(w, c.lastName) || (!!c.middleName && soundsLike(w, c.middleName)));
 
   const shown = inFilter.filter((c) => !q || exact(c)).sort(sorter);
   const alike = q ? inFilter.filter((c) => !exact(c) && soundAlike(c)).sort(sorter) : [];

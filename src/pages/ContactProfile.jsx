@@ -10,6 +10,7 @@ import { useActions } from '../lib/dataContext.js';
 import RichTextArea from '../components/RichTextArea.jsx';
 import { RichText, plainText } from '../lib/richText.jsx';
 import { usePins } from '../lib/pins.js';
+import { formalName } from '../lib/names.js';
 
 const formatDateTime = (iso) =>
   new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -129,7 +130,7 @@ export default function ContactProfile({ contact, org, orgsById, contracts, onBa
       <header className="profile-head">
         <Avatar contact={contact} f={f} size="lg" />
         <div className="profile-id">
-          <h1>{contact.firstName} {contact.lastName}</h1>
+          <h1>{formalName(contact)}</h1>
           <p className="profile-role">
             {contact.title}
             {contact.title && ' at '}

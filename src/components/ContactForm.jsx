@@ -6,6 +6,7 @@ import Icon from './Icon.jsx';
 import { OrgFields } from './OrgForm.jsx';
 import { UnsavedDialog, sameName, SaveError, errorText } from './formBits.jsx';
 import { soundsLike } from '../lib/soundex.js';
+import { PREFIXES, SUFFIXES } from '../lib/names.js';
 
 const NEW_ORG = '__new';
 const phoneLabels = ['Mobile', 'Work', 'Home', 'Other'];
@@ -18,8 +19,11 @@ const socials = [
 ];
 
 const blank = {
+  prefix: '',
   firstName: '',
+  middleName: '',
   lastName: '',
+  suffix: '',
   title: '',
   orgId: '',
   photo: null,
@@ -87,6 +91,8 @@ export default function ContactForm({ contact, organizations, contacts, onSave, 
   const [step, setStep] = useState('edit'); // 'edit' | 'confirm-move' | 'leaving'
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  // Prefix, middle name and suffix stay tucked away until asked for (or already filled in).
+  const [moreName, setMoreName] = useState(!!(start.prefix || start.middleName || start.suffix));
 
   const isEdit = !!contact;
   const dirty = JSON.stringify(form) !== JSON.stringify(start) || form.orgId === NEW_ORG;
@@ -120,8 +126,11 @@ export default function ContactForm({ contact, organizations, contacts, onSave, 
   };
 
   const clean = (orgId) => ({
+    prefix: (form.prefix || '').trim(),
     firstName: form.firstName.trim(),
+    middleName: (form.middleName || '').trim(),
     lastName: form.lastName.trim(),
+    suffix: (form.suffix || '').trim(),
     title: form.title.trim(),
     orgId: orgId || null,
     photo: form.photo,
@@ -215,6 +224,30 @@ export default function ContactForm({ contact, organizations, contacts, onSave, 
             <input value={form.lastName} onChange={set('lastName')} aria-invalid={!!errors.lastName} />
             {errors.lastName && <small className="field-error">{errors.lastName}</small>}
           </label>
+          {moreName ? (
+            <div className="name-extra span-2">
+              <label className="field">
+                <span>Prefix</span>
+                <input value={form.prefix} onChange={set('prefix')} list="name-prefixes" placeholder="Dr., Capt." maxLength={50} autoFocus={!start.prefix && !start.middleName && !start.suffix} />
+              </label>
+              <label className="field">
+                <span>Middle name</span>
+                <input value={form.middleName} onChange={set('middleName')} maxLength={200} />
+              </label>
+              <label className="field">
+                <span>Suffix</span>
+                <input value={form.suffix} onChange={set('suffix')} list="name-suffixes" placeholder="Jr., III" maxLength={50} />
+              </label>
+              <datalist id="name-prefixes">{PREFIXES.map((p) => <option key={p} value={p} />)}</datalist>
+              <datalist id="name-suffixes">{SUFFIXES.map((p) => <option key={p} value={p} />)}</datalist>
+            </div>
+          ) : (
+            <div className="span-2">
+              <button type="button" className="link-btn" onClick={() => setMoreName(true)}>
+                <Icon name="plus" size={14} /> Add prefix, middle name or suffix
+              </button>
+            </div>
+          )}
           {duplicate && (
             <p className="warn span-2">
               {duplicate.firstName} {duplicate.lastName} is already in your contacts.{' '}

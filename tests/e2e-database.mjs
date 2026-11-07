@@ -116,18 +116,18 @@ try {
     await page.locator('.profile-head').getByRole('button', { name: 'Edit' }).click();
     const d = drawer(page);
     await d.getByRole('button', { name: 'Add prefix, middle name or suffix' }).click();
-    await d.getByLabel('Prefix').fill('Dr.');
-    await d.getByLabel('Middle name').fill('Quinn');
-    await d.getByLabel('Suffix').fill('III');
+    await d.getByLabel('Prefix', { exact: true }).fill('Dr.');
+    await d.getByLabel('Middle name', { exact: true }).fill('Quinn');
+    await d.getByLabel('Suffix', { exact: true }).fill('III');
     await d.locator('button.btn-primary').click();
     await page.getByRole('heading', { name: 'Dr. Testa Quinn Endtoend III' }).waitFor();
     const saved = await call('getContact', testId);
     assert.deepEqual([saved.prefix, saved.middleName, saved.suffix], ['Dr.', 'Quinn', 'III']);
     // Clear them again so the later steps find "Testa Endtoend".
     await page.locator('.profile-head').getByRole('button', { name: 'Edit' }).click();
-    await d.getByLabel('Prefix').fill('');
-    await d.getByLabel('Middle name').fill('');
-    await d.getByLabel('Suffix').fill('');
+    await d.getByLabel('Prefix', { exact: true }).fill('');
+    await d.getByLabel('Middle name', { exact: true }).fill('');
+    await d.getByLabel('Suffix', { exact: true }).fill('');
     await d.locator('button.btn-primary').click();
     await page.getByRole('heading', { name: 'Testa Endtoend', exact: true }).waitFor();
   });

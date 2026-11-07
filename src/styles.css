@@ -926,5 +926,6 @@ select:disabled { opacity: 0.7; cursor: not-allowed; }
 .move-data-list strong { color: var(--ink); }
 
 /* Contact form: prefix, middle name and suffix in one row under first/last name. */
-.name-extra { display: grid; grid-template-columns: 1fr 1.6fr 1fr; gap: 14px; }
+.name-extra { display: grid; grid-template-columns: 1fr 1.6fr 1fr auto; gap: 14px; }
+.name-extra-remove { align-self: end; margin-bottom: 3px; }
 @media (max-width: 560px) { .name-extra { grid-template-columns: 1fr; } }

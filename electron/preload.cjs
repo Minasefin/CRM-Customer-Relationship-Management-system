@@ -10,7 +10,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 const DB_FUNCTIONS = [
-  'getOrganizationAttachments', 'addOrganizationAttachment', 'getOrganizationAttachment', 'archiveOrganizationAttachment' 'linkOrganizationAttachment', 'getContactAttachments',
+  'getOrganizationAttachments', 'addOrganizationAttachment', 'getOrganizationAttachment', 'archiveOrganizationAttachment', 'linkOrganizationAttachment', 'getContactAttachments',
   'getOrganizations', 'getOrganization', 'createOrganization', 'updateOrganization', 'archiveOrganization',
   'getContacts', 'getContact', 'createContact', 'updateContact', 'setContactStatus', 'moveContact',
   'getEmploymentHistory', 'getAllEmployment', 'addNote', 'updateNote',

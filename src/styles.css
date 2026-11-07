@@ -893,6 +893,12 @@ select:disabled { opacity: 0.7; cursor: not-allowed; }
 .timeline .rich-editor li { position: static; padding: 0; margin-left: 0; border-left: 0; list-style: disc; }
 .timeline .rich-editor li::before { content: none; display: none; }
 
+/* Settings → Your data: the folder path, and the move pop-up's list. */
+.data-folder { min-width: 0; }
+.data-folder-path { display: block; margin-top: 8px; padding: 6px 10px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); color: var(--ink); font-size: 12.5px; overflow-wrap: anywhere; user-select: text; }
+.move-data-list { margin: 4px 0 18px; padding-left: 20px; display: grid; gap: 8px; color: var(--muted); line-height: 1.45; }
+.move-data-list strong { color: var(--ink); }
+
 /* Contact form: prefix, middle name and suffix in one row under first/last name. */
 .name-extra { display: grid; grid-template-columns: 1fr 1.6fr 1fr; gap: 14px; }
 @media (max-width: 560px) { .name-extra { grid-template-columns: 1fr; } }

@@ -35,7 +35,7 @@ app.whenReady().then(async () => {
   const second = `Synthetic replacement ${randomBytes(16).toString('hex')}`;
   await mode('sample');
   assert.equal(await call('isSetUp'), false);
-  assert.equal(await evaluate('Object.keys(window.crm.api).length'), 33);
+  assert.equal(await evaluate('Object.keys(window.crm.api).length'), 38);
   await assert.rejects(call('getContacts'), /locked/);
   await assert.rejects(call('getOrganizationAttachments','missing'), /locked/);
   await assert.rejects(call('getStorageLocation'), /locked/);
@@ -71,11 +71,24 @@ app.whenReady().then(async () => {
   assert.deepEqual(await call('login', second), { ok: true });
   await mode('database');
   assert.equal((await call('getOrganizations')).length, 1);
+  const enrollment = await call('beginTotpSetup', second);
+  assert.equal(enrollment.ok, true);
+  const bits = [...enrollment.secret].map(c => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'.indexOf(c).toString(2).padStart(5, '0')).join('');
+  const secret = Buffer.from(bits.match(/.{8}/g).map(b => parseInt(b, 2)));
+  const code = require('./totp.cjs').token(secret, Math.floor(Date.now() / 30000));
+  secret.fill(0);
+  const confirmation = await call('confirmTotpSetup', code);
+  assert.equal(confirmation.ok, true);
+  assert.equal(confirmation.recoveryCodes.length, 10);
+  assert.deepEqual(await call('getTotpStatus'), { enabled: true });
   powerMonitor.emit('suspend');
   await mode('sample');
   await assert.rejects(call('getContacts'), /locked/);
-  assert.equal((await call('login', second)).ok, true);
+  assert.equal((await call('login', second)).ok, false);
+  await wait(1100);
+  assert.equal((await call('loginWithTotp', second, confirmation.recoveryCodes[0])).ok, true);
   await mode('database');
+  assert.deepEqual(await call('disableTotp', second, confirmation.recoveryCodes[1]), { ok: true });
   powerMonitor.emit('lock-screen');
   await mode('sample');
   assert.equal((await call('login',second)).ok,true);
@@ -94,7 +107,7 @@ app.whenReady().then(async () => {
   await until(async()=>!wc.isLoading()&&await evaluate("window.crm?.dataMode === 'sample'"));
   await assert.rejects(call('login',second),/Restart/);
   app.quit=originalQuit;
-  console.log('PASS Electron: 33 named APIs, names, encrypted attachments, storage picker/copy/restart, auth and locking');
+  console.log('PASS Electron: 38 named APIs, TOTP enrollment and recovery login, names, encrypted attachments, storage picker/copy/restart, auth and locking');
   clearTimeout(watchdog);
   app.quit();
 }).catch(() => {

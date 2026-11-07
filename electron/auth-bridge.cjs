@@ -3,7 +3,7 @@ const { app, BrowserWindow, powerMonitor } = require('electron');
 const { handle } = require('./ipc.cjs');
 const { createAuth } = require('../auth/index.cjs');
 
-const AUTH_FUNCTIONS = ['isSetUp', 'setUpPassword', 'login', 'logout', 'changePassword'];
+const AUTH_FUNCTIONS = ['isSetUp', 'setUpPassword', 'login', 'logout', 'changePassword', 'getTotpStatus', 'beginTotpSetup', 'confirmTotpSetup', 'loginWithTotp', 'disableTotp'];
 
 function setupAuthBridge(database, directory = app.getPath('userData')) {
   let restartRequired=false;

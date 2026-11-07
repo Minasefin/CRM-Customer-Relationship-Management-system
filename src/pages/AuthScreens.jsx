@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import PasswordField, { passwordLength } from '../components/PasswordField.jsx';
 import Logo from '../components/Logo.jsx';
+import { cleanCode } from '../components/TwoStep.jsx';
 
 const MIN = 15;
 const MAX = 128;
@@ -104,10 +105,17 @@ export function SetupScreen({ onExplore }) {
 
 export function LoginScreen({ onExplore, locked }) {
   const [pw, setPw] = useState('');
+  const [code, setCode] = useState('');
+  const [twoStep, setTwoStep] = useState(false); // two-step sign-in is on: ask for a code too
+  const [recovery, setRecovery] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [waitUntil, setWaitUntil] = useState(0);
   const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    api().getTotpStatus?.().then((st) => setTwoStep(!!(st && st.enabled))).catch(() => {});
+  }, []);
 
   // Count down when too many wrong guesses make the app wait.
   useEffect(() => {
@@ -120,29 +128,34 @@ export function LoginScreen({ onExplore, locked }) {
   const submit = async (e) => {
     e.preventDefault();
     if (!pw || busy || secondsLeft) return;
+    if (twoStep && !cleanCode(code)) return setError(recovery ? 'Enter a recovery code.' : 'Enter the 6-digit code from your authenticator app.');
     setBusy(true);
     setError('');
     let result;
     try {
-      result = await api().login(pw);
+      result = twoStep ? await api().loginWithTotp(pw, cleanCode(code)) : await api().login(pw);
     } catch (err) {
       result = { ok: false, error: reason(err) };
     }
     if (result && result.ok) return; // the app reloads itself, unlocked
     const msg = (result && result.error) || 'Incorrect password.';
     const wait = /wait (\d+) seconds?/i.exec(msg);
+    // 2FA was turned on elsewhere (or this screen didn't know yet): show the code field.
+    if (!twoStep && /authenticator or recovery code/i.test(msg)) setTwoStep(true);
     // A wrong guess makes the next one wait (1s, 2s, 4s… up to a minute).
     setWaitUntil(Date.now() + (wait ? Number(wait[1]) * 1000 : 1000));
     setNow(Date.now());
-    setError(wait ? 'Too many wrong tries.' : msg);
-    setPw('');
+    setError(wait ? 'Too many wrong tries.' : /authenticator or recovery code/i.test(msg) ? (twoStep ? "That code didn't work. Use the newest one from the app." : 'Enter the 6-digit code from your authenticator app.') : msg);
+    // Keep the password if only the code was wrong.
+    if (!/authenticator or recovery code/i.test(msg)) setPw('');
+    setCode('');
     setBusy(false);
   };
 
   return (
     <AuthCard
       title={locked ? 'Locked' : 'Welcome back'}
-      sub={locked ? 'The app locked to keep your data private. Enter your password to continue.' : 'Enter your password to open your contacts.'}
+      sub={(locked ? 'The app locked to keep your data private. ' : '') + (twoStep ? 'Enter your password and the code from your phone.' : locked ? 'Enter your password to continue.' : 'Enter your password to open your contacts.')}
       footer={<ExploreLink onExplore={onExplore} />}
     >
       <form onSubmit={submit} className="auth-form" noValidate>
@@ -153,8 +166,29 @@ export function LoginScreen({ onExplore, locked }) {
           onChange={(v) => { setPw(v); setError(''); }}
           autoComplete="current-password"
           autoFocus
-          invalid={!!error}
+          invalid={!!error && !twoStep}
         />
+        {twoStep && (
+          <div className="auth-code">
+            <label className="field" htmlFor="signin-code">
+              <span>{recovery ? 'Recovery code' : '6-digit code from your authenticator app'}</span>
+              <input
+                id="signin-code"
+                value={code}
+                onChange={(e) => { setCode(e.target.value); setError(''); }}
+                inputMode={recovery ? 'text' : 'numeric'}
+                autoComplete="one-time-code"
+                maxLength={recovery ? 48 : 7}
+                placeholder={recovery ? '32 letters and numbers' : '123456'}
+                spellCheck={false}
+                className="code-input"
+              />
+            </label>
+            <button type="button" className="link-btn" onClick={() => { setRecovery(!recovery); setCode(''); setError(''); }}>
+              {recovery ? 'Use the app instead' : "Don't have your phone? Use a recovery code"}
+            </button>
+          </div>
+        )}
         {error && <p className="save-error" role="alert">{error}</p>}
         <button className="btn-primary auth-submit" disabled={busy || !pw || secondsLeft > 0}>
           {busy ? 'Unlocking…' : secondsLeft ? `Try again in ${secondsLeft}s` : 'Unlock'}

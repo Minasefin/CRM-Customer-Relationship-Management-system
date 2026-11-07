@@ -3,12 +3,24 @@
 // Uses a temporary folder and made-up passwords; never your data.
 import { _electron as electron } from 'playwright-core';
 import { mkdtempSync, rmSync } from 'node:fs';
+import { createHmac } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 const DIR = mkdtempSync(path.join(tmpdir(), 'crm-login-e2e-'));
 const PW = 'maple ladder orbit canoe river';
 const PW2 = 'quiet harbor lantern seven fig';
+
+// A real authenticator code (RFC 6238, SHA-1, 6 digits, 30 s) from the setup key shown in Settings.
+function totp(base32, time = Date.now()) {
+  const bits = [...base32.replace(/\s/g, '')].map((c) => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'.indexOf(c).toString(2).padStart(5, '0')).join('');
+  const key = Buffer.from(bits.match(/.{8}/g).map((b) => parseInt(b, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(time / 30000)));
+  const h = createHmac('sha1', key).update(counter).digest();
+  const o = h[h.length - 1] & 15;
+  return String((h.readUInt32BE(o) & 0x7fffffff) % 1e6).padStart(6, '0');
+}
 let failed = 0;
 
 async function launch() {
@@ -101,6 +113,41 @@ try {
     await page.getByRole('heading', { name: 'Move your data to another folder?' }).waitFor();
     await page.getByRole('button', { name: 'Cancel' }).click();
     await page.getByRole('heading', { name: 'Move your data to another folder?' }).waitFor({ state: 'detached' });
+  });
+  await s('two-step sign-in: turn on (scan key + code), recovery codes, sign in with a code, turn off', async () => {
+    await page.getByRole('button', { name: 'Turn on…' }).click();
+    await page.getByLabel('Your Auria password', { exact: true }).fill(PW2);
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('heading', { name: 'Scan this with your phone' }).waitFor();
+    await page.locator('svg.qr').waitFor();
+    await page.getByText("Can't scan? Enter a key instead").click();
+    const key = await page.locator('.two-step-key code').textContent();
+    await page.getByLabel('6-digit code from the app').fill(totp(key));
+    await page.getByRole('button', { name: 'Turn on', exact: true }).click();
+    await page.getByRole('heading', { name: 'Save your recovery codes' }).waitFor();
+    const codes = (await page.locator('.recovery-codes code').allTextContents()).map((c) => c.replace(/\s/g, ''));
+    if (codes.length !== 10) throw new Error(`expected 10 recovery codes, got ${codes.length}`);
+    await page.getByLabel('I saved my recovery codes').check();
+    await page.getByRole('button', { name: 'Done' }).click();
+    await page.locator('.setting-row', { hasText: 'Two-step sign-in' }).locator('.pill-on').waitFor();
+
+    // Locked: password alone isn't enough; password + a recovery code is.
+    await page.locator('.sidebar').getByRole('button', { name: 'Lock' }).click();
+    await page.getByRole('heading', { name: 'Locked' }).waitFor();
+    await page.getByLabel('Password', { exact: true }).fill(PW2);
+    await page.getByRole('button', { name: /Use a recovery code/ }).click();
+    await page.getByLabel('Recovery code').fill(codes[0]);
+    await page.getByRole('button', { name: 'Unlock' }).click();
+    await page.waitForFunction(() => window.crm?.dataMode === 'database' && document.querySelector('.sidebar'));
+
+    // Turn it off again (password + another recovery code) so later steps sign in with the password.
+    await page.locator('.sidebar-foot').getByRole('button', { name: /^Settings/ }).click();
+    await page.getByRole('button', { name: 'Turn off…' }).click();
+    await page.getByLabel('Your Auria password', { exact: true }).fill(PW2);
+    await page.getByRole('button', { name: 'Use a recovery code instead' }).click();
+    await page.getByLabel('Recovery code').fill(codes[1]);
+    await page.getByRole('button', { name: 'Turn off', exact: true }).click();
+    await page.locator('.setting-row', { hasText: 'Two-step sign-in' }).locator('.pill-off').waitFor();
   });
   await app.close();
   ({ app, page } = await launch());

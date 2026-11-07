@@ -392,8 +392,13 @@ export default function FileSection({ mode = 'firm', org, contact, contacts = []
     setFiles(null);
     setError('');
     setFlash('');
-    load();
   }, [key]);
+  // Reload whenever the app reloads its data (e.g. after a form saved files for this person),
+  // keeping the current list on screen until the new one arrives.
+  const record = person ? contact : org;
+  useEffect(() => {
+    load();
+  }, [record]);
   useEffect(() => {
     if (!flash) return;
     const t = setTimeout(() => setFlash(''), 5000);

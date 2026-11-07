@@ -11,6 +11,7 @@ import RichTextArea from '../components/RichTextArea.jsx';
 import { RichText, plainText } from '../lib/richText.jsx';
 import { usePins } from '../lib/pins.js';
 import { formalName } from '../lib/names.js';
+import FileSection from '../components/FileSection.jsx';
 
 const formatDateTime = (iso) =>
   new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -82,7 +83,7 @@ function NoteItem({ note, onUpdate }) {
 const statusLabel = { active: 'Active', inactive: 'Left / inactive', deceased: 'Deceased' };
 const socialLabel = { x: 'X', instagram: 'Instagram', snapchat: 'Snapchat', facebook: 'Facebook' };
 
-export default function ContactProfile({ contact, org, orgsById, contracts, onBack, onEdit, onAddNote, onUpdateNote, onAddContract, onEditContract, onOpenOrg }) {
+export default function ContactProfile({ contact, org, orgsById, contracts, contacts = [], employment = [], onBack, onEdit, onAddNote, onUpdateNote, onAddContract, onEditContract, onOpenOrg }) {
   const [settings] = useSettings();
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
@@ -308,6 +309,8 @@ export default function ContactProfile({ contact, org, orgsById, contracts, onBa
               </button>
             )}
           </section>
+
+          <FileSection mode="person" contact={contact} contacts={contacts} contracts={contracts} employment={employment} orgsById={orgsById} />
 
           {socialRows.length > 0 && (
             <section className="panel">

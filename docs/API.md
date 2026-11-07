@@ -100,8 +100,12 @@ The existing getContacts/getContact responses supply these fields for UI search 
 - addOrganizationAttachment(orgId, { name, mimeType, dataBase64 }) -> Attachment
 - getOrganizationAttachment(id) -> { ...Attachment, dataBase64 }
 - archiveOrganizationAttachment(id, archived = true) -> Attachment
+- linkOrganizationAttachment(id, { contactId, contractId }) -> Attachment (null or omitted = not about anyone; the whole firm)
+- getContactAttachments(contactId) -> Attachment[] (files about this person, from any firm; includes archived)
 
-Attachment = { id, orgId, name, mimeType, size, createdAt, archived }.
+addOrganizationAttachment also takes optional contactId and contractId. contractId must be one of the same firm's contracts. Database version 3 adds these two columns; version 1 and 2 databases upgrade on open.
+
+Attachment = { id, orgId, contactId, contractId, name, mimeType, size, createdAt, archived }.
 size is decoded bytes. Each file must be 1 byte through 10 MiB. Content and metadata live inside the encrypted database; no plaintext attachment cache is created.
 Supported filename extensions/MIME pairs: PDF, PNG, JPEG, GIF, WebP, TXT, CSV, DOCX, XLSX and PPTX (see database/attachments.cjs for exact MIME strings).
 Base64 must be canonical. Filenames cannot contain paths/control characters. File types are metadata validation, not antivirus scanning; bytes are never automatically executed or opened.

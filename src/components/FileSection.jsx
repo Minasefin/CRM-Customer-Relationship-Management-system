@@ -1,4 +1,6 @@
-// Files attached to a firm (issue #41): contracts, site photos, rosters.
+// Files (issue #41): contracts, site photos, rosters. Each file is kept with a firm and can
+// be about one person and/or one of that firm's contracts. Shown on the firm page (all of
+// its files) and on a person's profile (every file about them, from any firm).
 // They're stored inside the encrypted database (Adrian's API). Images and text files
 // preview inside the app. Anything can be saved out as a copy, after a warning that the
 // copy is a normal, unencrypted file. The main process does the saving; this screen
@@ -9,6 +11,7 @@ import { api } from '../api/index.js';
 import Icon from './Icon.jsx';
 import { errorText } from './formBits.jsx';
 import { formatDate } from '../lib/freshness.js';
+import { shortName } from '../lib/names.js';
 
 const MAX = 10 * 1024 * 1024; // same limit as database/attachments.cjs
 
@@ -130,19 +133,94 @@ function PreviewDialog({ file, onSave, onClose }) {
   );
 }
 
-export default function FirmFiles({ org }) {
+// Who or what a file is about: an optional person and an optional contract of the same firm.
+function AboutDialog({ title, fileName, people, contracts, value, confirm, onConfirm, onClose }) {
+  const [contactId, setContactId] = useState(value.contactId || '');
+  const [contractId, setContractId] = useState(value.contractId || '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const pickContract = (id) => {
+    setContractId(id);
+    // Picking a contract fills in its contractor if no person is chosen yet.
+    const k = contracts.find((c) => c.id === id);
+    if (k && !contactId && people.some((p) => p.id === k.contactId)) setContactId(k.contactId);
+  };
+  const go = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      await onConfirm({ contactId: contactId || null, contractId: contractId || null });
+    } catch (e) {
+      setError(errorText(e));
+      setBusy(false);
+    }
+  };
+  const close = () => !busy && onClose();
+  return (
+    <Dialog title={title} onClose={close}>
+      <p className="muted file-about-name">{fileName}</p>
+      <div className="file-about-fields">
+        <label className="field">
+          <span>Person</span>
+          <select value={contactId} onChange={(e) => setContactId(e.target.value)} disabled={busy}>
+            <option value="">Nobody in particular</option>
+            {people.map((p) => <option key={p.id} value={p.id}>{shortName(p)}</option>)}
+          </select>
+        </label>
+        <label className="field">
+          <span>Contract</span>
+          <select value={contractId} onChange={(e) => pickContract(e.target.value)} disabled={busy}>
+            <option value="">No contract</option>
+            {contracts.map((k) => <option key={k.id} value={k.id}>{k.title}</option>)}
+          </select>
+        </label>
+      </div>
+      {error && <p className="save-error" role="alert">{error}</p>}
+      <div className="btn-row">
+        <button className="btn-primary" onClick={go} disabled={busy}>{busy ? 'Saving…' : confirm}</button>
+        <button className="btn-ghost" onClick={close} disabled={busy}>Cancel</button>
+      </div>
+    </Dialog>
+  );
+}
+
+// mode 'firm':   every file kept with `org`, each labelled with who/what it's about.
+// mode 'person': every file about `contact`, from any firm (a compact panel on the profile).
+export default function FileSection({ mode = 'firm', org, contact, contacts = [], contracts = [], employment = [], orgsById = {} }) {
   const [files, setFiles] = useState(null);
   const [error, setError] = useState('');
   const [flash, setFlash] = useState('');
-  const [busy, setBusy] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [preview, setPreview] = useState(null);
   const [saving, setSaving] = useState(null);
+  const [pending, setPending] = useState(null); // a picked file waiting for "who is it about?"
+  const [linking, setLinking] = useState(null); // a saved file whose link is being changed
   const input = useRef(null);
+  const person = mode === 'person';
+  const key = person ? contact.id : org.id;
+
+  // New files are kept with this firm (on a profile: the person's current firm).
+  const addOrg = person ? orgsById[contact.orgId] : org;
+  const canAdd = !!addOrg && !addOrg.archived && !(person && contact.status !== 'active');
+
+  const byId = Object.fromEntries(contacts.map((c) => [c.id, c]));
+  const contractsById = Object.fromEntries(contracts.map((k) => [k.id, k]));
+  // Choices for a file kept with firm `orgId`: anyone who works or worked there, and its contracts.
+  const choices = (orgId, current = {}) => ({
+    people: contacts
+      .filter((c) => c.orgId === orgId || c.id === current.contactId || employment.some((e) => e.orgId === orgId && e.contactId === c.id))
+      .sort((a, b) => shortName(a).localeCompare(shortName(b))),
+    contracts: contracts.filter((k) => k.orgId === orgId && (!k.archived || k.id === current.contractId)),
+  });
+  const about = (f) => {
+    const k = f.contractId && contractsById[f.contractId];
+    if (person) return [orgsById[f.orgId]?.name, k?.title].filter(Boolean).join(' · ');
+    const p = f.contactId && byId[f.contactId];
+    return [p && shortName(p), k?.title].filter(Boolean).join(' · ') || 'Whole firm';
+  };
 
   const load = () =>
-    api
-      .getOrganizationAttachments(org.id)
+    (person ? api.getContactAttachments(contact.id) : api.getOrganizationAttachments(org.id))
       .then(setFiles)
       .catch((e) => setError(errorText(e)));
   useEffect(() => {
@@ -150,14 +228,14 @@ export default function FirmFiles({ org }) {
     setError('');
     setFlash('');
     load();
-  }, [org.id]);
+  }, [key]);
   useEffect(() => {
     if (!flash) return;
     const t = setTimeout(() => setFlash(''), 5000);
     return () => clearTimeout(t);
   }, [flash]);
 
-  const add = async (e) => {
+  const pick = (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
@@ -167,18 +245,22 @@ export default function FirmFiles({ org }) {
     if (!mimeType) return setError(`${file.name} can't be added. Use a PDF, Word, Excel or PowerPoint file, an image (PNG, JPEG, GIF, WebP), or a TXT or CSV file.`);
     if (!file.size) return setError(`${file.name} is empty.`);
     if (file.size > MAX) return setError(`${file.name} is ${fileSize(file.size)}. Files can be up to 10 MB.`);
-    setBusy(true);
-    try {
-      await api.addOrganizationAttachment(org.id, { name: file.name, mimeType, dataBase64: await readBase64(file) });
-      await load();
-      setFlash(`Added ${file.name}.`);
-    } catch (err) {
-      setError(errorText(err));
-    } finally {
-      setBusy(false);
-    }
+    setPending({ file, mimeType });
   };
-
+  const add = async (links) => {
+    const { file, mimeType } = pending;
+    await api.addOrganizationAttachment(addOrg.id, { name: file.name, mimeType, dataBase64: await readBase64(file), ...links });
+    setPending(null);
+    await load();
+    setFlash(`Added ${file.name}.`);
+  };
+  const relink = async (links) => {
+    const f = linking;
+    await api.linkOrganizationAttachment(f.id, links);
+    setLinking(null);
+    await load();
+    setFlash(`Updated ${f.name}.`);
+  };
   const archive = async (f, archived) => {
     setError('');
     try {
@@ -192,51 +274,67 @@ export default function FirmFiles({ org }) {
 
   const open = (f) => (canPreview(f.mimeType) ? setPreview(f) : setSaving(f));
   const current = (files || []).filter((f) => !f.archived);
-  const archived = (files || []).filter((f) => f.archived);
+  const archived = person ? [] : (files || []).filter((f) => f.archived);
 
   const row = (f) => (
     <li key={f.id} className={'file-row' + (f.archived ? ' is-archived' : '')}>
-      <button className="file-open" onClick={() => open(f)} title={canPreview(f.mimeType) ? 'Preview' : 'Save a copy to open it'}>
+      <button className="file-open" onClick={() => open(f)} title={`${f.name} · ${about(f)}`}>
         <span className={'file-badge file-' + badge(f.name).toLowerCase()} aria-hidden="true">{badge(f.name)}</span>
-        <span className="file-name">{f.name}</span>
-        <span className="muted small file-meta">{fileSize(f.size)} · {formatDate(f.createdAt)}</span>
+        <span className="file-text">
+          <span className="file-name">{f.name}</span>
+          <span className="file-about">{about(f)}</span>
+        </span>
+        {!person && <span className="muted small file-meta">{fileSize(f.size)} · {formatDate(f.createdAt)}</span>}
       </button>
       {f.archived ? (
         <button className="link-btn" onClick={() => archive(f, false)}>Restore</button>
       ) : (
         <>
+          <button className="icon-btn" onClick={() => setLinking(f)} aria-label={`Change who ${f.name} is about`} title="Who is it about?">
+            <Icon name="edit" size={15} />
+          </button>
           <button className="icon-btn" onClick={() => setSaving(f)} aria-label={`Save a copy of ${f.name}`} title="Save a copy…">
             <Icon name="save" size={16} />
           </button>
-          <button className="icon-btn" onClick={() => archive(f, true)} aria-label={`Archive ${f.name}`} title="Archive">
-            <Icon name="archived" size={16} />
-          </button>
+          {!person && (
+            <button className="icon-btn" onClick={() => archive(f, true)} aria-label={`Archive ${f.name}`} title="Archive">
+              <Icon name="archived" size={16} />
+            </button>
+          )}
         </>
       )}
     </li>
   );
 
+  const picker = canAdd && <input ref={input} type="file" accept={ACCEPT} hidden onChange={pick} aria-label="Choose a file to add" />;
+  const empty = person
+    ? `No files about ${contact.firstName} yet.` + (addOrg ? '' : ' Files are kept with a firm, so add them from a firm page.')
+    : `No files yet. ${org.archived ? 'Restore the firm to add files.' : "Add contracts, site photos or rosters, up to 10 MB each. They're stored encrypted."}`;
+
   return (
-    <section className="org-section firm-files">
-      <div className="section-head">
+    <section className={person ? 'panel person-files' : 'org-section firm-files'}>
+      {person ? (
         <h2>Files</h2>
-        {!org.archived && (
-          <>
-            <button className="btn-ghost" onClick={() => input.current?.click()} disabled={busy || files === null}>
-              <Icon name="plus" size={15} /> {busy ? 'Adding…' : 'Add file'}
+      ) : (
+        <div className="section-head">
+          <h2>Files</h2>
+          {canAdd && (
+            <button className="btn-ghost" onClick={() => input.current?.click()} disabled={files === null}>
+              <Icon name="plus" size={15} /> Add file
             </button>
-            <input ref={input} type="file" accept={ACCEPT} hidden onChange={add} aria-label="Choose a file to add" />
-          </>
-        )}
-      </div>
+          )}
+        </div>
+      )}
+      {picker}
       {flash && <p className="banner banner-ok" role="status">{flash}</p>}
       {error && <p className="save-error" role="alert">{error}</p>}
-      {files !== null && current.length === 0 && (
-        <p className="muted">
-          No files yet. {org.archived ? 'Restore the firm to add files.' : 'Add contracts, site photos or rosters, up to 10 MB each. They\'re stored encrypted.'}
-        </p>
-      )}
+      {files !== null && current.length === 0 && <p className={'muted' + (person ? ' small' : '')}>{empty}</p>}
       {current.length > 0 && <ul className="file-list">{current.map(row)}</ul>}
+      {person && canAdd && (
+        <button className="link-btn add-under" onClick={() => input.current?.click()} disabled={files === null}>
+          <Icon name="plus" size={14} /> Add file
+        </button>
+      )}
       {archived.length > 0 && (
         <>
           <button className="link-btn file-archived-toggle" onClick={() => setShowArchived(!showArchived)} aria-expanded={showArchived}>
@@ -244,6 +342,28 @@ export default function FirmFiles({ org }) {
           </button>
           {showArchived && <ul className="file-list">{archived.map(row)}</ul>}
         </>
+      )}
+      {pending && (
+        <AboutDialog
+          title="Who is this file about?"
+          fileName={pending.file.name}
+          {...choices(addOrg.id, person ? { contactId: contact.id } : {})}
+          value={person ? { contactId: contact.id } : {}}
+          confirm="Add file"
+          onConfirm={add}
+          onClose={() => setPending(null)}
+        />
+      )}
+      {linking && (
+        <AboutDialog
+          title="Who is this file about?"
+          fileName={linking.name}
+          {...choices(linking.orgId, linking)}
+          value={linking}
+          confirm="Save"
+          onConfirm={relink}
+          onClose={() => setLinking(null)}
+        />
       )}
       {preview && (
         <PreviewDialog

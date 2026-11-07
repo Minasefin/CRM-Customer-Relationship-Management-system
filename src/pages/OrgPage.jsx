@@ -6,7 +6,7 @@ import MoreMenu from '../components/MoreMenu.jsx';
 import { orgMenu } from './OtherPages.jsx';
 import { useActions } from '../lib/dataContext.js';
 import { money } from '../lib/money.js';
-import FirmFiles from '../components/FirmFiles.jsx';
+import FileSection from '../components/FileSection.jsx';
 
 
 // Everyone at one firm: current employees, previous employees, and its contracts.
@@ -128,7 +128,7 @@ export default function OrgPage({ org, contacts, contactsById, contracts, employ
         )}
       </section>
 
-      <FirmFiles org={org} />
+      <FileSection mode="firm" org={org} contacts={contacts} contracts={contracts} employment={employment} />
     </div>
   );
 }

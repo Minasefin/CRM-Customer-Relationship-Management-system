@@ -32,7 +32,7 @@ test('v1 encrypted migration preserves relationships and optional names survive 
  db.closeDatabase();db.openDatabase(key);
  assert.equal((await db.getContact('c')).suffix,'III');
  db.closeDatabase();
- const raw=new SQLite(file);raw.key(key);assert.equal(raw.pragma('user_version',{simple:true}),2);raw.close();
+ const raw=new SQLite(file);raw.key(key);assert.equal(raw.pragma('user_version',{simple:true}),3);raw.close();
 });
 test('attachments are encrypted, bounded, archived, restored and retained after rekey',async t=>{
  const root=fixture(t),file=path.join(root,'crm.db'),key=randomBytes(32),next=randomBytes(32);

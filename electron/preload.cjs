@@ -62,6 +62,8 @@ ipcRenderer.on('crm:locked', () => {
 
 api.getStorageLocation = () => ipcRenderer.invoke('storage:getStorageLocation').catch(err=>{throw clean(err);});
 api.chooseStorageLocation = () => ipcRenderer.invoke('storage:chooseStorageLocation').catch(err=>{throw clean(err);});
+// Firm files (#41): the main process asks where to save; the page never sends a path.
+api.saveAttachmentCopy = (id) => ipcRenderer.invoke('files:saveAttachmentCopy', id).catch(err=>{throw clean(err);});
 
 contextBridge.exposeInMainWorld('crm', {
   platform: process.platform,

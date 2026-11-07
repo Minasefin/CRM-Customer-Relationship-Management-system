@@ -8,7 +8,7 @@
 // It uses a random throwaway key and a temporary folder, never your .dev-key or your data.
 import { _electron as electron } from 'playwright-core';
 import { randomBytes } from 'node:crypto';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
@@ -218,6 +218,35 @@ try {
     await page.waitForFunction(async () =>
       !(await window.crm.api.getOrganizations()).find((o) => o.name === 'Harbor Line Services').archived,
     );
+  });
+
+  await step('firm files: add, preview, save a copy, archive (stored in the encrypted database)', async () => {
+    const src = path.join(DATA_DIR, 'synthetic-roster.txt');
+    const out = path.join(DATA_DIR, 'saved-copy.txt');
+    writeFileSync(src, 'Synthetic roster\nLine two\n');
+    await nav(page, 'Organizations');
+    await page.getByText('Ironclad Security Group').first().click();
+    await page.getByLabel('Choose a file to add').setInputFiles(src);
+    await page.locator('.firm-files .banner', { hasText: 'Added synthetic-roster.txt.' }).waitFor();
+    const org = (await call('getOrganizations')).find((o) => o.name === 'Ironclad Security Group');
+    const [meta] = (await call('getOrganizationAttachments', org.id)).filter((a) => a.name === 'synthetic-roster.txt');
+    assert.equal(meta.mimeType, 'text/plain');
+
+    await page.locator('.file-open', { hasText: 'synthetic-roster.txt' }).click();
+    await page.locator('.file-preview-body pre', { hasText: 'Synthetic roster' }).waitFor();
+    await page.locator('.dialog').getByRole('button', { name: 'Save a copy…' }).click();
+    await page.getByRole('heading', { name: 'Save a copy?' }).waitFor();
+    // Stand in for the system save dialog (main process) so the test can pick the path.
+    await app.evaluate(({ dialog }, file) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath: file });
+    }, out);
+    await page.getByRole('button', { name: 'Save…', exact: true }).click();
+    await page.locator('.firm-files .banner', { hasText: 'Saved a copy of synthetic-roster.txt.' }).waitFor();
+    assert.equal(readFileSync(out, 'utf8'), 'Synthetic roster\nLine two\n');
+
+    await page.getByRole('button', { name: 'Archive synthetic-roster.txt' }).click();
+    await page.locator('.firm-files .banner', { hasText: 'Archived synthetic-roster.txt.' }).waitFor();
+    assert.equal((await call('getOrganizationAttachments', org.id)).find((a) => a.id === meta.id).archived, true);
   });
 
   await step('mark a person left / inactive', async () => {

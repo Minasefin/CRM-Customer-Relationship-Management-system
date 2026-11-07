@@ -46,6 +46,7 @@ async function setupDatabaseBridge() {
     const db = createDatabase(path.join(directory, 'crm.db'));
     const auth = setupAuthBridge(db, directory);
     require('./storage-bridge.cjs').setupStorageBridge({auth,db,directory});
+    require('./files-bridge.cjs').setupFilesBridge({ db, assertUnlocked: () => auth.assertUnlocked() });
     // Getters make the existing preload handshake reflect the current session.
     status = { get enabled() { return auth.isUnlocked(); },
       get mode() { return auth.isUnlocked() ? 'database' : 'sample'; }, error: null };
@@ -70,6 +71,7 @@ async function setupDatabaseBridge() {
     db = createDatabase(file);
     db.openDatabase(key);
     await require('./dev-seed.cjs').seedIfEmpty(db, file, key);
+    require('./files-bridge.cjs').setupFilesBridge({ db });
     status = { enabled: true, mode: 'dev-database', error: null };
   } catch (err) {
     console.error('[database] could not open the development database:', err && err.message);

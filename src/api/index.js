@@ -49,6 +49,32 @@ export const api = real || {
     return copy(org);
   },
 
+  // Files attached to a firm (#41). Metadata only in lists; the bytes come with getOrganizationAttachment.
+  async getOrganizationAttachments(orgId) {
+    find(mock.organizations, orgId);
+    return copy(mock.attachments.filter((a) => a.orgId === orgId).map(({ dataBase64, ...meta }) => meta));
+  },
+  async addOrganizationAttachment(orgId, { name, mimeType, dataBase64 }) {
+    const org = find(mock.organizations, orgId);
+    if (org.archived) fail('Restore the organization before assigning records.');
+    const a = { id: newId('a'), orgId, name, mimeType, size: Math.floor((dataBase64.length * 3) / 4) - (dataBase64.endsWith('==') ? 2 : dataBase64.endsWith('=') ? 1 : 0), createdAt: now(), archived: false, dataBase64 };
+    mock.attachments.push(a);
+    const { dataBase64: _, ...meta } = a;
+    return copy(meta);
+  },
+  async getOrganizationAttachment(id) {
+    return copy(find(mock.attachments, id));
+  },
+  async archiveOrganizationAttachment(id, archived = true) {
+    const a = find(mock.attachments, id);
+    a.archived = archived;
+    const { dataBase64, ...meta } = a;
+    return copy(meta);
+  },
+  async saveAttachmentCopy() {
+    fail("Saving a copy works with your saved data, not the sample data.");
+  },
+
   // Contacts
   async getContacts() {
     return copy(mock.contacts);

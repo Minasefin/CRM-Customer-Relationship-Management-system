@@ -10,6 +10,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 const DB_FUNCTIONS = [
+  'getOrganizationAttachments', 'addOrganizationAttachment', 'getOrganizationAttachment', 'archiveOrganizationAttachment',
   'getOrganizations', 'getOrganization', 'createOrganization', 'updateOrganization', 'archiveOrganization',
   'getContacts', 'getContact', 'createContact', 'updateContact', 'setContactStatus', 'moveContact',
   'getEmploymentHistory', 'getAllEmployment', 'addNote', 'updateNote',
@@ -58,6 +59,9 @@ ipcRenderer.on('crm:locked', () => {
   document.documentElement?.replaceChildren();
   if (!loggingOut) location.reload();
 });
+
+api.getStorageLocation = () => ipcRenderer.invoke('storage:getStorageLocation').catch(err=>{throw clean(err);});
+api.chooseStorageLocation = () => ipcRenderer.invoke('storage:chooseStorageLocation').catch(err=>{throw clean(err);});
 
 contextBridge.exposeInMainWorld('crm', {
   platform: process.platform,

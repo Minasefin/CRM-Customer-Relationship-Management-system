@@ -1,4 +1,4 @@
--- Version 1; applied atomically to an empty encrypted database.
+-- Version 2; applied atomically to an empty encrypted database.
 CREATE TABLE organizations (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL CHECK(length(trim(name))>0), city TEXT NOT NULL, country TEXT NOT NULL, logo TEXT, archived INTEGER NOT NULL CHECK(archived IN (0,1)), created_at TEXT NOT NULL) STRICT;
 CREATE TABLE contacts (id TEXT PRIMARY KEY NOT NULL, org_id TEXT REFERENCES organizations(id), first_name TEXT NOT NULL, last_name TEXT NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('active','inactive','deceased')), address TEXT NOT NULL, spouse TEXT NOT NULL, photo TEXT, created_at TEXT NOT NULL, CHECK(length(trim(first_name))>0 OR length(trim(last_name))>0)) STRICT;
 CREATE TABLE contact_phones (contact_id TEXT NOT NULL REFERENCES contacts(id), position INTEGER NOT NULL, label TEXT NOT NULL CHECK(label IN ('Mobile','Work','Home','Other')), number TEXT NOT NULL, PRIMARY KEY(contact_id,position)) STRICT;
@@ -19,3 +19,19 @@ CREATE INDEX contracts_contact ON contracts(contact_id);
 CREATE INDEX contracts_org ON contracts(org_id);
 CREATE INDEX revisions_note ON note_revisions(note_id);
 PRAGMA user_version=1;
+
+ALTER TABLE contacts ADD COLUMN middle_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE contacts ADD COLUMN prefix TEXT NOT NULL DEFAULT '';
+ALTER TABLE contacts ADD COLUMN suffix TEXT NOT NULL DEFAULT '';
+CREATE TABLE organization_attachments (
+ id TEXT PRIMARY KEY NOT NULL,
+ org_id TEXT NOT NULL REFERENCES organizations(id),
+ name TEXT NOT NULL,
+ mime_type TEXT NOT NULL,
+ size INTEGER NOT NULL CHECK(size BETWEEN 1 AND 10485760),
+ data BLOB NOT NULL CHECK(length(data)=size),
+ created_at TEXT NOT NULL,
+ archived INTEGER NOT NULL DEFAULT 0 CHECK(archived IN (0,1))
+) STRICT;
+CREATE INDEX attachments_org ON organization_attachments(org_id,created_at);
+PRAGMA user_version=2;

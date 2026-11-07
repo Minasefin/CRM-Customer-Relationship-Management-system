@@ -1,7 +1,7 @@
 // Electron main process: opens the app window and locks it down.
 // Database (Adrian) and auth (Nic) handlers get registered with handle() from ./ipc.cjs
 // so the UI can call them through the preload bridge. See docs/API.md and SECURITY.md.
-const { app, BrowserWindow, shell, session } = require('electron');
+const { app, BrowserWindow, shell, session, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { isAppUrl, DEV_URL } = require('./ipc.cjs');
@@ -110,7 +110,13 @@ app.whenReady().then(async () => {
     callback({ cancel: !isAppUrl(details.url) && !details.url.startsWith('devtools://') });
   });
 
-  await setupDatabaseBridge(); // opens the development database if `npm run dev:db` supplied a key
+  try {
+    await setupDatabaseBridge();
+  } catch (err) {
+    dialog.showErrorBox('Unable to open data storage', err.userMessage || 'The data folder could not be opened. Reconnect its drive and restart Auria.');
+    app.quit();
+    return;
+  }
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

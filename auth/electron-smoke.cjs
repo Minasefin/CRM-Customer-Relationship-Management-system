@@ -1,7 +1,8 @@
 'use strict';
 // Run through node auth/run-electron-smoke.cjs.
 // Uses the actual main/preload/UI with an isolated temporary userData directory.
-const { app, BrowserWindow, powerMonitor } = require('electron');
+const { app, BrowserWindow, powerMonitor, dialog } = require('electron');
+const fs = require('node:fs');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const { randomBytes } = require('node:crypto');
@@ -34,8 +35,10 @@ app.whenReady().then(async () => {
   const second = `Synthetic replacement ${randomBytes(16).toString('hex')}`;
   await mode('sample');
   assert.equal(await call('isSetUp'), false);
-  assert.equal(await evaluate('Object.keys(window.crm.api).length'), 24);
+  assert.equal(await evaluate('Object.keys(window.crm.api).length'), 30);
   await assert.rejects(call('getContacts'), /locked/);
+  await assert.rejects(call('getOrganizationAttachments','missing'), /locked/);
+  await assert.rejects(call('getStorageLocation'), /locked/);
   // Locked: the create-password screen is shown, not the app.
   assert.equal(await evaluate('document.body.textContent.includes("Create your password")'), true);
   assert.equal(await evaluate('!!document.querySelector(".sidebar")'), false);
@@ -46,6 +49,17 @@ app.whenReady().then(async () => {
   assert.deepEqual(await call('getContacts'), []);
   const org = await call('createOrganization', { name: 'Synthetic Electron firm' });
   assert.equal((await call('getOrganization', org.id)).name, org.name);
+  const contact=await call('createContact',{firstName:'Synthetic',lastName:'Electron',middleName:'Test',prefix:'Dr.',suffix:'III',orgId:org.id});
+  assert.equal((await call('getContact',contact.id)).middleName,'Test');
+  const attachment=await call('addOrganizationAttachment',org.id,{name:'synthetic.txt',mimeType:'text/plain',dataBase64:Buffer.from('Synthetic Electron attachment').toString('base64')});
+  assert.equal((await call('getOrganizationAttachments',org.id))[0].id,attachment.id);
+  assert.equal(Buffer.from((await call('getOrganizationAttachment',attachment.id)).dataBase64,'base64').toString(),'Synthetic Electron attachment');
+  assert.equal((await call('archiveOrganizationAttachment',attachment.id,true)).archived,true);
+  assert.equal((await call('getStorageLocation')).directory,directory);
+  const originalPicker=dialog.showOpenDialog;
+  dialog.showOpenDialog=async()=>({canceled:true,filePaths:[]});
+  assert.deepEqual(await call('chooseStorageLocation'),{canceled:true});
+  dialog.showOpenDialog=originalPicker;
   assert.deepEqual(await call('changePassword', first, second), { ok: true });
 
   assert.deepEqual(await call('logout'), { ok: true });
@@ -64,7 +78,23 @@ app.whenReady().then(async () => {
   await mode('database');
   powerMonitor.emit('lock-screen');
   await mode('sample');
-  console.log('PASS Electron: sample mode, setup, 24 named API actions, encrypted data, rekey, logout, login, sleep and screen lock');
+  assert.equal((await call('login',second)).ok,true);
+  await mode('database');
+  const target=path.join(directory,'relocated');fs.mkdirSync(target);
+  dialog.showOpenDialog=async()=>({canceled:false,filePaths:[target]});
+  let relaunched=false,quitRequested=false;
+  const originalQuit=app.quit.bind(app);
+  app.relaunch=()=>{relaunched=true;};app.quit=()=>{quitRequested=true;};
+  // Lock notification can reload the renderer before the IPC result arrives.
+  await call('chooseStorageLocation').catch(()=>{});
+  await until(()=>relaunched&&quitRequested);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(directory,'storage-location.json'),'utf8')).directory,target);
+  assert.equal(fs.existsSync(path.join(target,'crm.db')),true);
+  assert.equal(fs.existsSync(path.join(target,'auth.json')),true);
+  await until(async()=>!wc.isLoading()&&await evaluate("window.crm?.dataMode === 'sample'"));
+  await assert.rejects(call('login',second),/Restart/);
+  app.quit=originalQuit;
+  console.log('PASS Electron: 30 named APIs, names, encrypted attachments, storage picker/copy/restart, auth and locking');
   clearTimeout(watchdog);
   app.quit();
 }).catch(() => {

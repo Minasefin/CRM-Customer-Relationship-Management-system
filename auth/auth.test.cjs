@@ -385,3 +385,35 @@ test('lock during TOTP enrollment derivation cancels setup and wipes material', 
   assert.equal(material.every(byte => byte === 0), true);
   assert.deepEqual(await f.auth.getTotpStatus(), { enabled: false });
 });
+
+test('interactive phone harness exercises real backend and cleans up on quit and interruption', async () => {
+  const { run } = require('./phone-test.cjs');
+  const output = [];
+  const recovery = [];
+  let uri;
+  const actions = ['c', 'o', 'l', 'r', 'l', 'd', 'o', 'p', 'q'];
+  await run({
+    show: line => {
+      output.push(line);
+      if (line.startsWith('Secret key: ')) uri = `otpauth://totp/test?secret=${line.slice(12)}&algorithm=SHA1&digits=6&period=30`;
+      if (/^[a-f0-9]{32}$/.test(line)) recovery.push(line);
+    },
+    ask: async prompt => {
+      if (prompt === 'Action: ') return actions.shift() || 'q';
+      if (prompt === 'Phone code: ') return authenticatorCode(uri, Date.now());
+      return recovery.shift();
+    },
+  });
+  assert.equal(actions.length, 0);
+  assert.equal(output.some(line => line.startsWith('REFUSED:')), false);
+  assert.equal(output.filter(line => line === 'OK').length, 7);
+  assert.ok(output.includes('TOTP: enabled | Session: unlocked'));
+  assert.ok(output.includes('TOTP: disabled | Session: unlocked'));
+  assert.match(output.at(-1), /Temporary test files removed/);
+  const interrupted = [];
+  await assert.rejects(run({
+    show: line => interrupted.push(line),
+    ask: async () => { throw Object.assign(new Error('Test cancellation'), { code: 'ABORT_ERR' }); },
+  }), { code: 'ABORT_ERR' });
+  assert.match(interrupted.at(-1), /Temporary test files removed/);
+});

@@ -185,3 +185,41 @@ forms):
    login works. Repeat on installed Windows, macOS and Linux builds.
 
 The Microsoft Authenticator phone acceptance check has not been performed here.
+
+### Interactive phone test without the application
+
+Run from the repository root:
+
+```sh
+node auth/phone-test.cjs
+```
+
+No Electron or UI is launched. The script creates a disposable encrypted database
+in the OS temporary directory and supplies a random synthetic password internally.
+It never reads or changes the real application's account or database.
+
+On your phone, open Microsoft Authenticator, add **Other account**, and select
+**Enter code manually**. Use `Auria disposable phone test` as the account name and
+the displayed secret as the key. Choose time-based if prompted. No QR library or
+online QR generator is required. See [Microsoft's account setup guidance](https://support.microsoft.com/en-us/authenticator/how-to-add-your-accounts-to-microsoft-authenticator).
+
+- Enter `C`, then the six-digit phone code to confirm enrollment. Save the displayed
+  disposable recovery codes if you want to test recovery.
+- Enter `O` to log out, then `P` to verify password-only login is refused.
+- Wait for any displayed retry delay and for a **new** phone code, then enter `L`
+  and that code. Successful verification prints `OK` and `Session: unlocked`.
+- Enter `R` to recreate the backend from its temporary files, then `L` with a
+  recovery code. Repeat `R`/`L` with that same recovery code to verify reuse fails.
+- While signed in, use `D` with a fresh phone or unused recovery code to disable
+  TOTP. Then `O` and `P` should allow password-only login.
+- `S` shows status; `E` replaces expired/unconfirmed enrollment (update the phone's
+  key too); `Q` exits. If the session locks after inactivity, use `P` before
+  confirmed enrollment, or `L` after enrollment, to sign in again.
+
+Codes typed into this disposable tester are visible in the terminal. Do not enter
+real credentials or share its terminal output. Each run uses a new secret. Normal
+exit, Ctrl+C and terminal EOF clean up temporary files. A forced process kill or
+power loss can leave an `auria-phone-test-*` directory in the OS temp folder.
+Remove the disposable account from your phone after testing. Phone and computer
+clocks should use automatic time. This script verifies the real backend with your
+phone; it does not test UI forms or cross-platform installer packaging.

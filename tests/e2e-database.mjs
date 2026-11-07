@@ -96,7 +96,13 @@ try {
     assert.equal(exposed.require, 'undefined');
     assert.equal(exposed.process, 'undefined');
     assert.equal(exposed.ipc, 'undefined');
-    for (const k of exposed.keys) assert.ok(!/key|open|close|rekey/i.test(k), `lifecycle function exposed: ${k}`);
+    // The database's own lifecycle and internal functions must never reach the page.
+    for (const k of ['openDatabase', 'closeDatabase', 'rekeyDatabase', 'isOpen', 'prepareRelocation', 'secondFactorRequired', 'setSecondFactorRequired'])
+      assert.ok(!exposed.keys.includes(k), `internal function exposed: ${k}`);
+    // Nothing else key/open/close-like either, except the two recovery-key sign-in functions
+    // (they need the password or the recovery key itself; see auth/README.md).
+    const allowed = ['createRecoveryKey', 'resetPasswordWithRecoveryKey'];
+    for (const k of exposed.keys) assert.ok(allowed.includes(k) || !/key|open|close|rekey/i.test(k), `lifecycle function exposed: ${k}`);
   });
 
   await step('add a contact', async () => {

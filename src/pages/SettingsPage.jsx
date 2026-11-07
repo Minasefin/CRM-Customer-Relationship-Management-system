@@ -4,6 +4,7 @@ import { useSettings } from '../hooks/useSettings.js';
 import PasswordField, { passwordLength } from '../components/PasswordField.jsx';
 import { errorText } from '../components/formBits.jsx';
 import TwoStep from '../components/TwoStep.jsx';
+import RecoveryKeySetting from '../components/RecoveryKey.jsx';
 
 function Toggle({ id, checked, onChange, disabled }) {
   return (
@@ -265,6 +266,7 @@ export default function SettingsPage({ theme, canLock = false }) {
               <button className="btn-ghost" onClick={() => window.crm.api.logout()}>Lock now</button>
             </div>
             <ChangePassword />
+            <RecoveryKeySetting />
             <TwoStep />
           </>
         ) : (

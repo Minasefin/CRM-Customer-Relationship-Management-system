@@ -471,3 +471,100 @@ test('2FA cannot be switched off by editing or swapping auth.json (flag inside t
   f.restart(); time += 61000;
   assert.deepEqual(await f.auth.login(password), { ok: true });
 });
+
+test('recovery key: reset a forgotten password, data kept, old password and old key stop working', async t => {
+  let time = 300000;
+  const f = fixture(t, { now: () => time, monotonicNow: () => time });
+  const first = phrase(), second = phrase(), third = phrase();
+  await f.auth.setUpPassword(first);
+  const org = await f.database.createOrganization({ name: 'Synthetic recovery firm' });
+  assert.deepEqual(await f.auth.getRecoveryStatus(), { enabled: false });
+  assert.equal((await f.auth.createRecoveryKey('wrong password here!!')).ok, false);
+  time += 61000;
+  const made = await f.auth.createRecoveryKey(first);
+  assert.equal(made.ok, true);
+  assert.match(made.recoveryKey, /^([A-Z2-7]{4}-){7}[A-Z2-7]{4}$/);
+  assert.deepEqual(await f.auth.getRecoveryStatus(), { enabled: true });
+  assert.equal(JSON.stringify(f.state()).includes(made.recoveryKey.replace(/-/g, '')), false); // never stored
+
+  // A normal password change keeps the recovery key working.
+  assert.deepEqual(await f.auth.changePassword(first, second), { ok: true });
+  f.restart(); time += 61000;
+
+  // Forgot it: refused without a key / with a wrong key (and that counts as an attempt).
+  assert.equal((await f.auth.resetPasswordWithRecoveryKey('', third)).ok, false);
+  const wrong = await f.auth.resetPasswordWithRecoveryKey('AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA', third);
+  assert.match(wrong.error, /didn't work/);
+  assert.equal(f.database.isOpen(), false);
+  assert.match((await f.auth.resetPasswordWithRecoveryKey(made.recoveryKey, third)).error, /wait/);
+  time += 61000;
+  // Spaces, lower case and missing dashes are fine.
+  const reset = await f.auth.resetPasswordWithRecoveryKey(made.recoveryKey.toLowerCase().replace(/-/g, ' '), third);
+  assert.equal(reset.ok, true);
+  assert.notEqual(reset.recoveryKey, made.recoveryKey);
+  assert.equal(f.auth.isUnlocked(), true);
+  assert.equal((await f.database.getOrganization(org.id)).name, 'Synthetic recovery firm');
+
+  f.restart(); time += 61000;
+  assert.equal((await f.auth.login(second)).ok, false);
+  time += 61000;
+  assert.match((await f.auth.resetPasswordWithRecoveryKey(made.recoveryKey, phrase())).error, /didn't work/); // old key retired
+  time += 61000;
+  assert.deepEqual(await f.auth.login(third), { ok: true });
+  assert.equal((await f.database.getOrganization(org.id)).name, 'Synthetic recovery firm');
+
+  // The new key works the same way.
+  f.restart(); time += 61000;
+  assert.equal((await f.auth.resetPasswordWithRecoveryKey(reset.recoveryKey, first)).ok, true);
+});
+
+test('recovery key: not a way around 2FA; refused when none was made', async t => {
+  let time = 300000;
+  const f = fixture(t, { now: () => time, monotonicNow: () => time });
+  const password = phrase(), next = phrase();
+  await f.auth.setUpPassword(password);
+  f.restart(); time += 61000;
+  assert.match((await f.auth.resetPasswordWithRecoveryKey('AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA', next)).error, /No recovery key/);
+  time += 61000;
+  assert.deepEqual(await f.auth.login(password), { ok: true });
+  const made = await f.auth.createRecoveryKey(password);
+  const enrollment = await f.auth.beginTotpSetup(password);
+  const confirmed = await f.auth.confirmTotpSetup(authenticatorCode(enrollment.otpauthUri, time));
+  assert.equal(confirmed.ok, true);
+  f.restart(); time += 61000;
+  // Recovery key alone: refused, nothing unlocked, password unchanged.
+  const noCode = await f.auth.resetPasswordWithRecoveryKey(made.recoveryKey, next);
+  assert.match(noCode.error, /authenticator or recovery code/);
+  assert.equal(f.database.isOpen(), false);
+  time += 61000;
+  assert.equal((await f.auth.loginWithTotp(password, confirmed.recoveryCodes[0])).ok, true);
+  f.restart(); time += 61000;
+  // With a 2FA recovery code: works; 2FA stays on with the new password.
+  const ok = await f.auth.resetPasswordWithRecoveryKey(made.recoveryKey, next, confirmed.recoveryCodes[1]);
+  assert.equal(ok.ok, true);
+  assert.equal(f.database.secondFactorRequired(), true);
+  f.restart(); time += 61000;
+  assert.equal((await f.auth.login(next)).ok, false); // still needs a code
+  time += 61000;
+  assert.deepEqual(await f.auth.loginWithTotp(next, confirmed.recoveryCodes[2]), { ok: true });
+});
+
+test('recovery key: interrupted reset (crash after re-encrypting) still signs in with the new password', async t => {
+  let time = 300000, failOn = 0, writes = 0;
+  const f = fixture(t, { now: () => time, monotonicNow: () => time, writeState: (file, state) => {
+    if (failOn && ++writes === failOn) throw new Error('Injected crash');
+    atomicWrite(file, state);
+  } });
+  const password = phrase(), next = phrase();
+  await f.auth.setUpPassword(password);
+  const org = await f.database.createOrganization({ name: 'Synthetic crash firm' });
+  const made = await f.auth.createRecoveryKey(password);
+  f.restart(); time += 61000;
+  failOn = 3; // 1: attempt reserved, 2: pending saved, 3: finished state (crash here, after the rekey)
+  assert.equal((await f.auth.resetPasswordWithRecoveryKey(made.recoveryKey, next)).ok, false);
+  failOn = 0;
+  assert.equal(f.state().operation, 'change');
+  f.restart(); time += 61000;
+  assert.deepEqual(await f.auth.login(next), { ok: true });
+  assert.equal((await f.database.getOrganization(org.id)).name, 'Synthetic crash firm');
+});

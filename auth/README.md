@@ -160,6 +160,17 @@ who knows the password and can modify the program/authentication files or open t
 database directly. Restoring old matching backups can also restore consumed codes.
 Keep backups protected; recovery codes cannot recover a forgotten password.
 
+### Recovery key (password reset)
+
+A forgotten password can be replaced only with a **recovery key** the person made earlier in Settings → Security. Without one, nobody can reset it.
+
+- `createRecoveryKey(password)` (signed in): makes a random 160-bit key, shown once as 8 groups of 4 (`XXXX-XXXX-…`). The key itself is never stored. `auth.json` keeps two AES-256-GCM envelopes (`auth/recovery.cjs`): the password-derived key material locked with a scrypt key from the recovery key, and that scrypt key locked with the password material. Making a new key replaces the old one.
+- `changePassword` re-locks the material with the new password, so the recovery key keeps working.
+- `resetPasswordWithRecoveryKey(key, newPassword, code)` (signed out): opens the material with the key, checks it against `check`, opens the database without unlocking, applies the same 2FA rule as sign-in (the code is required if 2FA is on), then runs the same pending → rekey → stable steps as `changePassword`. It returns a **new** recovery key; the old one stops working. It counts toward the wrong-attempt waits. Spaces, dashes and case in the key don't matter.
+- `getRecoveryStatus()` → `{ enabled }`.
+
+Limits: anyone with the recovery key (and the 2FA code, if it's on) can choose a new password, so it must be kept as carefully as the password. Tests: the three `recovery key:` tests in `auth/auth.test.cjs`, including a crash right after re-encrypting.
+
 ### Why editing auth.json can't turn 2FA off
 
 `auth.json` is not encrypted or signed, so on its own it can't be trusted to say whether 2FA is on: deleting its `totp` part, or putting back a copy from before 2FA was enrolled, used to let the password alone sign in. So the encrypted database also keeps a "2FA required" flag (database version 4, table `app_meta`, main process only; the screens can't reach it).

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import PasswordField, { passwordLength } from '../components/PasswordField.jsx';
 import Logo from '../components/Logo.jsx';
 import { cleanCode } from '../components/TwoStep.jsx';
+import { ShowRecoveryKey } from '../components/RecoveryKey.jsx';
 
 const MIN = 15;
 const MAX = 128;
@@ -91,7 +92,7 @@ export function SetupScreen({ onExplore }) {
           hint={mismatch ? <small className="field-error">Doesn't match yet.</small> : null}
         />
         <p className="auth-warning">
-          <strong>There is no password reset.</strong> If the password is lost, the data can't be recovered by anyone.
+          <strong>Nobody can reset this password for you.</strong> After this, make a recovery key in Settings → Security: it's the only way to choose a new password if you forget this one.
           Keep it in a password manager or somewhere safe.
         </p>
         {error && <p className="save-error" role="alert">{error}</p>}
@@ -103,7 +104,90 @@ export function SetupScreen({ onExplore }) {
   );
 }
 
+// Forgot the password: recovery key (+ 2FA code if it's on) and a new password.
+// On success the session is unlocked, the NEW recovery key is shown once, then the app reloads.
+function ResetPassword({ twoStep, onBack, onExplore }) {
+  const [key, setKey] = useState('');
+  const [pw, setPw] = useState('');
+  const [again, setAgain] = useState('');
+  const [code, setCode] = useState('');
+  const [recovery, setRecovery] = useState(false);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [newKey, setNewKey] = useState('');
+  const [hasKey, setHasKey] = useState(null);
+  useEffect(() => {
+    api().getRecoveryStatus?.().then((st) => setHasKey(!!(st && st.enabled))).catch(() => setHasKey(true));
+  }, []);
+  const len = passwordLength(pw);
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!key.trim()) return setError('Enter your recovery key.');
+    if (len < MIN) return setError(`Use at least ${MIN} characters for the new password.`);
+    if (pw !== again) return setError("The two passwords don't match.");
+    if (twoStep && !cleanCode(code)) return setError(recovery ? 'Enter a 2FA recovery code.' : 'Enter the 6-digit code from your authenticator app.');
+    setBusy(true);
+    setError('');
+    let r;
+    try {
+      r = await api().resetPasswordWithRecoveryKey(key, pw, twoStep ? cleanCode(code) : undefined);
+    } catch (err) {
+      r = { ok: false, error: reason(err) };
+    }
+    setBusy(false);
+    if (r && r.ok) return setNewKey(r.recoveryKey);
+    setError((r && r.error) || 'That did not work. Try again.');
+    setCode('');
+  };
+  if (newKey)
+    return (
+      <AuthCard title="Password changed" sub="Your old recovery key no longer works. Here's your new one.">
+        <ShowRecoveryKey recoveryKey={newKey} intro="" doneLabel="Open Auria" onDone={() => location.reload()} />
+      </AuthCard>
+    );
+  if (hasKey === false)
+    return (
+      <AuthCard title="Forgot your password?" sub="No recovery key was made for this data, so the password can't be reset. Not even we can open it without the password." footer={<ExploreLink onExplore={onExplore} />}>
+        <button type="button" className="btn-primary auth-submit" onClick={onBack}>Back to sign in</button>
+      </AuthCard>
+    );
+  return (
+    <AuthCard title="Reset your password" sub="Use the recovery key you saved when you made it in Settings." footer={<ExploreLink onExplore={onExplore} />}>
+      <form onSubmit={submit} className="auth-form" noValidate>
+        <label className="field" htmlFor="recovery-key">
+          <span>Recovery key</span>
+          <input id="recovery-key" value={key} onChange={(e) => { setKey(e.target.value); setError(''); }} placeholder="XXXX-XXXX-XXXX-…" autoComplete="off" spellCheck={false} autoFocus className="code-input" />
+        </label>
+        <PasswordField
+          id="reset-password"
+          label="New password"
+          value={pw}
+          onChange={(v) => { setPw(v); setError(''); }}
+          autoComplete="new-password"
+          hint={<small className={'pw-count' + (len >= MIN ? ' is-ok' : '')}>{len >= MIN ? `${len} characters, long enough` : `${len} of ${MIN} characters`}</small>}
+        />
+        <PasswordField id="reset-again" label="Type it again" value={again} onChange={(v) => { setAgain(v); setError(''); }} autoComplete="new-password" invalid={again.length > 0 && again !== pw} />
+        {twoStep && (
+          <div className="auth-code">
+            <label className="field" htmlFor="reset-code">
+              <span>{recovery ? '2FA recovery code' : '6-digit code from your authenticator app'}</span>
+              <input id="reset-code" value={code} onChange={(e) => { setCode(e.target.value); setError(''); }} inputMode={recovery ? 'text' : 'numeric'} autoComplete="one-time-code" maxLength={recovery ? 48 : 7} placeholder={recovery ? '32 letters and numbers' : '123456'} spellCheck={false} className="code-input" />
+            </label>
+            <button type="button" className="link-btn" onClick={() => { setRecovery(!recovery); setCode(''); }}>
+              {recovery ? 'Use the app instead' : "Don't have your phone? Use a 2FA recovery code"}
+            </button>
+          </div>
+        )}
+        {error && <p className="save-error" role="alert">{error}</p>}
+        <button className="btn-primary auth-submit" disabled={busy}>{busy ? 'Resetting…' : 'Reset password'}</button>
+        <button type="button" className="link-btn auth-back" onClick={onBack}>Back to sign in</button>
+      </form>
+    </AuthCard>
+  );
+}
+
 export function LoginScreen({ onExplore, locked }) {
+  const [resetting, setResetting] = useState(false);
   const [pw, setPw] = useState('');
   const [code, setCode] = useState('');
   const [twoStep, setTwoStep] = useState(false); // two-step sign-in is on: ask for a code too
@@ -152,6 +236,7 @@ export function LoginScreen({ onExplore, locked }) {
     setBusy(false);
   };
 
+  if (resetting) return <ResetPassword twoStep={twoStep} onBack={() => setResetting(false)} onExplore={onExplore} />;
   return (
     <AuthCard
       title={locked ? 'Locked' : 'Welcome back'}
@@ -193,7 +278,7 @@ export function LoginScreen({ onExplore, locked }) {
         <button className="btn-primary auth-submit" disabled={busy || !pw || secondsLeft > 0}>
           {busy ? 'Unlocking…' : secondsLeft ? `Try again in ${secondsLeft}s` : 'Unlock'}
         </button>
-        <p className="muted small auth-note">Forgot it? There's no reset. The data can only be opened with the password it was created with.</p>
+        <button type="button" className="link-btn auth-forgot" onClick={() => setResetting(true)}>Forgot your password?</button>
       </form>
     </AuthCard>
   );

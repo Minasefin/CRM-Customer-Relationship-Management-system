@@ -989,3 +989,13 @@ select:disabled { opacity: 0.7; cursor: not-allowed; }
 .form-files li.is-new { border-style: dashed; }
 .form-files .file-badge { width: 34px; height: 26px; font-size: 9.5px; }
 .form-file-name { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Recovery key */
+.pill-warn { background: #fdeee2; color: #b55a17; }
+:root[data-theme='dark'] .pill-warn { background: rgba(212, 149, 27, 0.18); color: #f0b45a; }
+.recovery-key { display: block; margin: 4px 0 12px; padding: 14px 16px; border-radius: var(--radius-ctl); background: var(--bg); border: 1px solid var(--line); color: var(--ink); font-size: 16px; font-weight: 700; letter-spacing: 0.06em; text-align: center; user-select: all; overflow-wrap: anywhere; }
+.recovery-show > .muted { margin: 0 0 10px; line-height: 1.5; }
+.recovery-show > .muted:empty { display: none; }
+.auth-forgot, .auth-back { justify-self: center; align-self: center; margin-top: 4px; }
+.recovery-show .btn-row { margin-top: 14px; }
+.auth-card .recovery-key { font-size: 13.5px; letter-spacing: 0.02em; white-space: nowrap; overflow-x: auto; padding: 12px 10px; }

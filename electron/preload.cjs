@@ -36,7 +36,7 @@ const api = Object.fromEntries(
 );
 
 let loggingOut = false;
-for (const name of ['isSetUp', 'setUpPassword', 'login', 'logout', 'changePassword', 'getTotpStatus', 'beginTotpSetup', 'confirmTotpSetup', 'loginWithTotp', 'disableTotp']) {
+for (const name of ['isSetUp', 'setUpPassword', 'login', 'logout', 'changePassword', 'getTotpStatus', 'beginTotpSetup', 'confirmTotpSetup', 'loginWithTotp', 'disableTotp', 'getRecoveryStatus', 'createRecoveryKey', 'resetPasswordWithRecoveryKey']) {
   api[name] = async (...args) => {
     if (name === 'logout') loggingOut = true;
     try {

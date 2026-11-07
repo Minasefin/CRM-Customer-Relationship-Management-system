@@ -16,7 +16,7 @@ function fixture(t) {
 }
 const txt = (name, body = 'Synthetic file') => ({ name, mimeType: 'text/plain', dataBase64: Buffer.from(body).toString('base64') });
 
-test('a version 2 database with files upgrades to 3 and keeps them (links start empty)', async (t) => {
+test('a version 2 database with files upgrades to the current version and keeps them (links start empty)', async (t) => {
   const file = fixture(t), key = randomBytes(32);
   const old = new SQLite(file); old.key(key);
   old.exec(fs.readFileSync(path.join(__dirname, 'migrations', '001-original.sql'), 'utf8'));
@@ -37,7 +37,7 @@ test('a version 2 database with files upgrades to 3 and keeps them (links start 
   assert.equal(Buffer.from((await db.getOrganizationAttachment('a')).dataBase64, 'base64').toString(), 'old');
   db.closeDatabase();
   const raw = new SQLite(file); raw.key(key);
-  assert.equal(raw.pragma('user_version', { simple: true }), 3);
+  assert.equal(raw.pragma('user_version', { simple: true }), 4);
   raw.close();
 });
 

@@ -10,6 +10,7 @@ const totp = require('./totp.cjs');
 
 const scryptAsync = promisify(scrypt);
 const IDLE_MS = 15 * 60 * 1000;
+const MISSING_FACTOR = 'Two-step sign-in is turned on for this data, but its details are missing from this computer. Restore the matching login file (auth.json) from a backup.';
 const GENERIC_ERROR = 'Authentication could not be completed. Try again. If this continues, restore a matching database and authentication backup.';
 const safeError = message => Object.assign(new Error(message), { userMessage: message });
 
@@ -188,13 +189,6 @@ function createAuth({ database, directory, databaseFile = path.join(directory, '
           try {
             assertEpoch(start);
             if (!matches(material, credential)) continue;
-            if (credential.totp) {
-              const payload = totp.unseal(credential.totp, material);
-              if (!totp.consume(payload, code, now())) throw safeError('A valid authenticator or recovery code is required.');
-              credential.totp = totp.seal(payload, material);
-              // Consume BEFORE database open: a failed write must never unlock.
-              save(state);
-            }
             if (state.operation !== 'setup' && !fs.existsSync(databaseFile)) throw new Error('Missing database');
             try { database.openDatabase(material.subarray(0, 32)); }
             catch {
@@ -202,8 +196,23 @@ function createAuth({ database, directory, databaseFile = path.join(directory, '
                 ? 'Password change was interrupted. Try the other password. If neither works, restore a matching backup.'
                 : GENERIC_ERROR);
             }
-            try { save(stable(credential)); }
-            catch (err) { lock(); throw err; }
+            // The database is open but the session is NOT unlocked yet. Whether 2FA is on comes
+            // from inside the encrypted database, so editing or swapping auth.json can't turn it
+            // off. Any failure below closes the database again.
+            try {
+              const required = database.secondFactorRequired();
+              if (required && !credential.totp) throw safeError(MISSING_FACTOR);
+              if (credential.totp) {
+                const payload = totp.unseal(credential.totp, material);
+                if (!totp.consume(payload, code, now())) throw safeError('A valid authenticator or recovery code is required.');
+                credential.totp = totp.seal(payload, material);
+                // Consume BEFORE unlocking: a failed write must never unlock.
+                save(state);
+                // Turning 2FA on writes auth.json first, then this flag; finish it if that was cut short.
+                if (!required) database.setSecondFactorRequired(true);
+              }
+              save(stable(credential));
+            } catch (err) { lock(); throw err; }
             unlocked = true; lastActivity = monotonicNow();
             return { ok: true };
           } finally { material.fill(0); }
@@ -257,6 +266,9 @@ function createAuth({ database, directory, databaseFile = path.join(directory, '
           recovery: recoveryCodes.map(totp.hashRecovery) }, enrollment.material);
         try { save(stable(state.current)); }
         catch (err) { lock(); throw err; }
+        // auth.json first, then the flag inside the database. If the flag write fails, the
+        // next sign-in still asks for a code (auth.json has the 2FA data) and sets it then.
+        try { database.setSecondFactorRequired(true); } catch { /* finished at next sign-in */ }
         clearEnrollment();
         return { ok: true, recoveryCodes };
       });
@@ -274,6 +286,9 @@ function createAuth({ database, directory, databaseFile = path.join(directory, '
           if (!matches(material, state.current)) throw safeError('Incorrect password.');
           const payload = totp.unseal(state.current.totp, material);
           if (!totp.consume(payload, code, now())) throw safeError('A valid authenticator or recovery code is required.');
+          // Flag first, then auth.json. If saving auth.json fails after this, it still has the
+          // 2FA data, so sign-in still asks for a code and turns the flag back on.
+          database.setSecondFactorRequired(false);
           delete state.current.totp;
           try { save(stable(state.current)); } catch (err) { lock(); throw err; }
           clearEnrollment(); return { ok: true };

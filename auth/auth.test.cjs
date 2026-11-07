@@ -345,7 +345,7 @@ for (const afterRekey of [false, true]) {
   });
 }
 
-test('TOTP consumption write failure never opens database; corrupt ciphertext fails closed', async t => {
+test('TOTP consumption write failure never unlocks (database closed again); corrupt ciphertext fails closed', async t => {
   let fail = false, writes = 0, time = 300000;
   const f = fixture(t, { now: () => time, monotonicNow: () => time, writeState: (file, state) => {
     if (fail && ++writes === 2) throw new Error('Injected consumption write failure');
@@ -416,4 +416,58 @@ test('interactive phone harness exercises real backend and cleans up on quit and
     ask: async () => { throw Object.assign(new Error('Test cancellation'), { code: 'ABORT_ERR' }); },
   }), { code: 'ABORT_ERR' });
   assert.match(interrupted.at(-1), /Temporary test files removed/);
+});
+
+test('2FA cannot be switched off by editing or swapping auth.json (flag inside the encrypted database)', async t => {
+  let time = 300000;
+  const f = fixture(t, { now: () => time, monotonicNow: () => time });
+  const file = path.join(f.directory, 'auth.json');
+  const password = phrase();
+  await f.auth.setUpPassword(password);
+  const beforeEnrollment = fs.readFileSync(file);
+  assert.equal(f.database.secondFactorRequired(), false);
+  const enrollment = await f.auth.beginTotpSetup(password);
+  const confirmed = await f.auth.confirmTotpSetup(authenticatorCode(enrollment.otpauthUri, time));
+  assert.equal(confirmed.ok, true);
+  assert.equal(f.database.secondFactorRequired(), true);
+  const enrolled = fs.readFileSync(file);
+
+  // 1. Restore the auth.json from before 2FA was turned on: password alone is refused.
+  f.restart(); time += 61000;
+  fs.writeFileSync(file, beforeEnrollment);
+  const rolledBack = await f.auth.login(password);
+  assert.equal(rolledBack.ok, false);
+  assert.match(rolledBack.error, /Two-step sign-in is turned on/);
+  assert.equal(f.database.isOpen(), false);
+  assert.equal(f.auth.isUnlocked(), false);
+
+  // 2. Strip the 2FA part out of the current auth.json: also refused.
+  f.restart(); time += 61000;
+  const stripped = JSON.parse(enrolled.toString());
+  delete stripped.current.totp; stripped.version = 1; stripped.failures = 0; stripped.nextAllowedAt = 0;
+  fs.writeFileSync(file, JSON.stringify(stripped));
+  assert.equal((await f.auth.login(password)).ok, false);
+  assert.equal(f.database.isOpen(), false);
+
+  // 3. The real file with a real code still works.
+  f.restart(); time += 61000;
+  fs.writeFileSync(file, enrolled);
+  const state = JSON.parse(enrolled.toString()); state.failures = 0; state.nextAllowedAt = 0;
+  atomicWrite(file, state);
+  assert.deepEqual(await f.auth.loginWithTotp(password, authenticatorCode(enrollment.otpauthUri, time)), { ok: true });
+
+  // 4. Flag write cut short when 2FA was turned on: sign-in still needs a code, and sets the flag.
+  f.database.setSecondFactorRequired(false);
+  f.restart(); time += 61000;
+  assert.equal((await f.auth.login(password)).ok, false);
+  time += 61000;
+  assert.deepEqual(await f.auth.loginWithTotp(password, confirmed.recoveryCodes[0]), { ok: true });
+  assert.equal(f.database.secondFactorRequired(), true);
+
+  // 5. Turning 2FA off properly clears the flag; password alone works again.
+  time += 61000;
+  assert.deepEqual(await f.auth.disableTotp(password, confirmed.recoveryCodes[1]), { ok: true });
+  assert.equal(f.database.secondFactorRequired(), false);
+  f.restart(); time += 61000;
+  assert.deepEqual(await f.auth.login(password), { ok: true });
 });

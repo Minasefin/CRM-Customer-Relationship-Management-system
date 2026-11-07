@@ -160,6 +160,16 @@ who knows the password and can modify the program/authentication files or open t
 database directly. Restoring old matching backups can also restore consumed codes.
 Keep backups protected; recovery codes cannot recover a forgotten password.
 
+### Why editing auth.json can't turn 2FA off
+
+`auth.json` is not encrypted or signed, so on its own it can't be trusted to say whether 2FA is on: deleting its `totp` part, or putting back a copy from before 2FA was enrolled, used to let the password alone sign in. So the encrypted database also keeps a "2FA required" flag (database version 4, table `app_meta`, main process only; the screens can't reach it).
+
+- **Sign-in:** the password opens the database but does not unlock the session. If the database says 2FA is required and `auth.json` has no 2FA data, sign-in is refused and the database is closed again. Otherwise a valid code is required as before, and only then is the session unlocked.
+- **Turning 2FA on:** `auth.json` is saved first, then the flag. If the flag write fails, the next sign-in still asks for a code (auth.json has the 2FA data) and sets the flag.
+- **Turning 2FA off:** the flag is cleared first, then `auth.json`. If saving `auth.json` fails, it still has the 2FA data, so sign-in still asks for a code and turns the flag back on.
+
+Limits, stated plainly: putting back old copies of **both** files together (database and auth.json) can't be detected, and anyone with the password and the files can open the database with their own tools. Offline 2FA is a lock on the app's door, not part of the encryption key. Tests: `2FA cannot be switched off by editing or swapping auth.json` in `auth/auth.test.cjs`.
+
 ### Automated verification versus phone acceptance
 
 `npm run test:auth` runs without a UI or phone. It checks the published RFC 6238

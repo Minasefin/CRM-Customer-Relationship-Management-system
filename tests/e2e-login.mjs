@@ -163,6 +163,11 @@ try {
     await page.getByRole('button', { name: 'Make key' }).click();
     const key = await page.locator('.recovery-key').textContent();
     if (!/^([A-Z2-7]{4}-){7}[A-Z2-7]{4}$/.test(key)) throw new Error(`odd recovery key: ${key}`);
+    // Copy key really puts the key on the system clipboard.
+    await app.evaluate(({ clipboard }) => clipboard.writeText('before'));
+    await page.getByRole('button', { name: 'Copy key' }).click();
+    await page.getByRole('button', { name: 'Copied' }).waitFor();
+    if ((await app.evaluate(({ clipboard }) => clipboard.readText())) !== key) throw new Error('Copy key did not copy the recovery key');
     await page.getByLabel('I saved my recovery key').check();
     await page.getByRole('button', { name: 'Done' }).click();
     await page.locator('.setting-row', { hasText: 'Recovery key' }).locator('.pill-on').waitFor();
@@ -177,6 +182,10 @@ try {
     await page.getByRole('heading', { name: 'Password changed' }).waitFor();
     const fresh = await page.locator('.recovery-key').textContent();
     if (fresh === key) throw new Error('the recovery key was not replaced');
+    await app.evaluate(({ clipboard }) => clipboard.writeText('before'));
+    await page.getByRole('button', { name: 'Copy key' }).click();
+    await page.getByRole('button', { name: 'Copied' }).waitFor();
+    if ((await app.evaluate(({ clipboard }) => clipboard.readText())) !== fresh) throw new Error('Copy key (after reset) did not copy the new key');
     await page.getByLabel('I saved my recovery key').check();
     await page.getByRole('button', { name: 'Open Auria' }).click();
     await page.waitForFunction(() => window.crm?.dataMode === 'database' && document.querySelector('.sidebar'));

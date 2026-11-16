@@ -28,12 +28,12 @@
     "@vitejs/plugin-react": "^5.2.0",
     "concurrently": "^9.1.0",
     "cross-env": "^7.0.3",
-    "electron": "^44.10.0",
+    "electron": "^44.11.3",
     "electron-builder": "26.18.0",
     "qrcode-generator": "2.0.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "vite": "^7.3.7",
+    "vite": "^7.3.8",
     "wait-on": "^8.0.1"
   },
   "author": "Mina, Adrian and Nic"
